@@ -148,9 +148,13 @@ class Model:
         return
     
     
-    def cast_param(self,key,dtype):
-        for param in self.param_dict[key]:
-            param.assign(tf.cast(param,dtype))
+    def cast_param(self,key=None,dtype=None):
+        if key is None:
+            for param in self.param:
+                param.assign(tf.cast(param,dtype))
+        else:
+            for param in self.param_dict[key]:
+                param.assign(tf.cast(param,dtype))
         return
     
     
@@ -201,6 +205,42 @@ class Model:
                 for name in self.layer_eval.keys():
                     for layer in self.layer_eval[name]:
                         layer.train_flag=True
+        return
+    
+    
+    def summary(self):
+        total_params = 0
+        trainable_params = 0
+        non_trainable_params = 0
+        total_memory = 0  # Memory usage in bytes
+
+        for param in self.param:
+            param_count = tf.size(param).numpy()
+            param_dtype_size = param.dtype.size
+            param_memory = param_count * param_dtype_size
+
+            total_params += param_count
+            total_memory += param_memory
+
+            if param.trainable:
+                trainable_params += param_count
+            else:
+                non_trainable_params += param_count
+
+        def format_memory(bytes_size):
+            units = ['Bytes', 'KB', 'MB', 'GB']
+            index = 0
+            while bytes_size >= 1024 and index < len(units) - 1:
+                bytes_size /= 1024
+                index += 1
+            return f"{bytes_size:.2f} {units[index]}"
+
+        # Print the summary with formatted memory usage
+        print("Model Summary")
+        print("-------------")
+        print(f"Total params: {total_params} ({format_memory(total_memory)})")
+        print(f"Trainable params: {trainable_params} ({format_memory(trainable_params * param_dtype_size)})")
+        print(f"Non-trainable params: {non_trainable_params} ({format_memory(non_trainable_params * param_dtype_size)})")
         return
     
     
