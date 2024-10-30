@@ -53,6 +53,52 @@ class EpsGreedyQPolicy:
         return action
 
 
+class AdaptiveEpsGreedyPolicy:
+    """
+    Adaptive epsilon-greedy policy.
+
+    This adaptive epsilon-greedy strategy dynamically adjusts the epsilon value
+    based on the training step, achieving a balance between exploration and exploitation.
+    """
+    def __init__(self, initial_eps=1.0, min_eps=0.1, decay_rate=0.0001):
+        """
+        Initialize the adaptive epsilon-greedy policy.
+
+        Parameters:
+            initial_eps (float): Initial exploration rate (epsilon).
+            min_eps (float): Minimum epsilon value (lowest exploration rate).
+            decay_rate (float): Decay rate for epsilon, defining how quickly exploration decreases over time.
+        """
+        self.initial_eps = initial_eps
+        self.eps = initial_eps
+        self.min_eps = min_eps
+        self.decay_rate = decay_rate
+
+    def select_action(self, q_values, step_counter):
+        """
+        Return the selected action using a dynamically adjusted epsilon value
+        to implement the epsilon-greedy strategy.
+
+        Parameters:
+            q_values (np.ndarray): List of Q-value estimates for each action.
+            step_counter (int): Current training step, used to calculate the current epsilon value.
+
+        Returns:
+            int: Selected action.
+        """
+        # Dynamically compute the epsilon value, which gradually decreases as step_counter increases
+        self.eps = self.min_eps + (self.initial_eps - self.min_eps) * np.exp(-self.decay_rate * step_counter)
+        
+        # Epsilon-greedy strategy: choose a random action with probability epsilon
+        if np.random.rand() < self.eps:
+            nb_actions = q_values.shape[0]
+            action = np.random.randint(0, nb_actions)
+        else:
+            action = np.argmax(q_values)
+        
+        return action
+
+
 class GreedyQPolicy:
     """Implement the greedy policy
 
