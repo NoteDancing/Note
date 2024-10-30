@@ -133,6 +133,11 @@ class RL:
                 a=self.policy.select_action(len(output), output)
             elif isinstance(self.policy, rl.EpsGreedyQPolicy):
                 a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
+                if self.pool_network==True:
+                    a=self.policy.select_action(output, self.step_counter.value)
+                else:
+                    a=self.policy.select_action(output, self.step_counter)
             elif isinstance(self.policy, rl.GreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannQPolicy):
