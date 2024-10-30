@@ -3,7 +3,7 @@ from Note import nn
 import multiprocessing
 from Note.RL import rl
 from Note.RL.rl.prioritized_replay import pr
-from multiprocessing import Array,Value
+from multiprocessing import Array
 import numpy as np
 import numpy.ctypeslib as npc
 import matplotlib.pyplot as plt
@@ -722,7 +722,6 @@ class RL:
             if self.PR!=True and self.HER!=True:
                 lock_list[index].acquire()
                 self.pool(s,a,next_s,r,done,index)
-                self.step_counter.value+=1
                 lock_list[index].release()
             else:
                 self.pool(s,a,next_s,r,done,index)
@@ -731,7 +730,6 @@ class RL:
                         self.TD_list[index]=np.append(self.TD_list[index],self.initial_TD)
                     if len(self.TD_list[index])>math.ceil(self.pool_size/self.processes):
                         self.TD_list[index]=self.TD_list[index][1:]
-                self.step_counter.value+=1
             if self.MA==True:
                 r,done=self.reward_done_func_ma(r,done)
             self.reward[p]=r+self.reward[p]
@@ -778,7 +776,6 @@ class RL:
                 self.done_pool_list.append(None)
             self.reward=np.zeros(processes,dtype='float32')
             self.reward=Array('f',self.reward)
-            self.step_counter=Value('i',0)
             if self.HER!=True:
                 lock_list=[mp.Lock() for _ in range(processes)]
             else:
@@ -848,6 +845,7 @@ class RL:
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
                     loss=self.train1(train_loss, self.optimizer_)
+                    self.step_counter+=1
                 else:
                     loss=self.train2(train_loss,self.optimizer_)
                 self.loss=loss
@@ -916,6 +914,7 @@ class RL:
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
                     loss=self.train1(train_loss, self.optimizer_)
+                    self.step_counter+=1
                 else:
                     loss=self.train2(train_loss,self.optimizer_)
                 self.loss=loss
@@ -1003,7 +1002,6 @@ class RL:
                 self.done_pool_list.append(None)
             self.reward=np.zeros(processes,dtype='float32')
             self.reward=Array('f',self.reward)
-            self.step_counter=Value('i',0)
             if self.HER!=True:
                 lock_list=[mp.Lock() for _ in range(processes)]
             else:
@@ -1079,6 +1077,7 @@ class RL:
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
                         loss=self.train1(None, self.optimizer_)
+                        self.step_counter+=1
                     else:
                         loss=self.train2(None,self.optimizer_)
                     self.loss=loss
@@ -1146,6 +1145,7 @@ class RL:
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
                         loss=self.train1(None, self.optimizer_)
+                        self.step_counter+=1
                     else:
                         loss=self.train2(None,self.optimizer_)
                     self.loss=loss
@@ -1216,6 +1216,7 @@ class RL:
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
                         loss=self.train1(None, self.optimizer_)
+                        self.step_counter+=1
                     else:
                         loss=self.train2(None,self.optimizer_)
                         
@@ -1289,6 +1290,7 @@ class RL:
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
                         loss=self.train1(None, self.optimizer_)
+                        self.step_counter+=1
                     else:
                         loss=self.train2(None,self.optimizer_)
                         
@@ -1364,6 +1366,7 @@ class RL:
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
                         loss=self.train1(None, self.optimizer_)
+                        self.step_counter+=1
                     else:
                         loss=self.train2(None,self.optimizer_)
                         
@@ -1437,6 +1440,7 @@ class RL:
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
                         loss=self.train1(None, self.optimizer_)
+                        self.step_counter+=1
                     else:
                         loss=self.train2(None,self.optimizer_)
                         
