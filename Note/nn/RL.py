@@ -134,10 +134,7 @@ class RL:
             elif isinstance(self.policy, rl.EpsGreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
-                if self.pool_network==True:
-                    a=self.policy.select_action(output, self.step_counter.value)
-                else:
-                    a=self.policy.select_action(output, self.step_counter)
+                a=self.policy.select_action(output, self.step_counter)
             elif isinstance(self.policy, rl.GreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannQPolicy):
@@ -145,10 +142,7 @@ class RL:
             elif isinstance(self.policy, rl.MaxBoltzmannQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
-                if self.pool_network==True:
-                    a=self.policy.select_action(output, self.step_counter.value)
-                else:
-                    a=self.policy.select_action(output, self.step_counter)
+                a=self.policy.select_action(output, self.step_counter)
         elif self.noise!=None:
             a=(output+self.noise.sample()).numpy()
         return a
