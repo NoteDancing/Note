@@ -104,16 +104,19 @@ class RL_pytorch:
     
     
     def select_action(self,s,i=None):
-        if self.MA!=True:
-            output=self.action(s).detach().numpy()
+        if self.jit_compile==True:
+            output=self.forward(s,i)
         else:
-            output=self.action(s,i).detach().numpy()
+            output=self.forward_(s,i)
         if self.policy!=None:
+            output=output.numpy()
             output=np.squeeze(output, axis=0)
             if isinstance(self.policy, rl.SoftmaxPolicy):
                 a=self.policy.select_action(len(output), output)
             elif isinstance(self.policy, rl.EpsGreedyQPolicy):
                 a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
+                a=self.policy.select_action(output, self.step_counter)
             elif isinstance(self.policy, rl.GreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannQPolicy):
@@ -121,12 +124,9 @@ class RL_pytorch:
             elif isinstance(self.policy, rl.MaxBoltzmannQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
-                if self.pool_network==True:
-                    a=self.policy.select_action(output, self.step_counter.value)
-                else:
-                    a=self.policy.select_action(output, self.step_counter)
+                a=self.policy.select_action(output, self.step_counter)
         elif self.noise!=None:
-            a=(output+self.noise.sample())
+            a=(output+self.noise.sample()).numpy()
         return a
     
     
@@ -427,7 +427,6 @@ class RL_pytorch:
             if self.PR!=True and self.HER!=True:
                 lock_list[index].acquire()
                 self.pool(s,a,next_s,r,done,index)
-                self.step_counter.value+=1
                 lock_list[index].release()
             else:
                 self.pool(s,a,next_s,r,done,index)
@@ -436,7 +435,6 @@ class RL_pytorch:
                         self.TD_list[index]=np.append(self.TD_list[index],self.initial_TD)
                     if len(self.TD_list[index])>math.ceil(self.pool_size/self.processes):
                         self.TD_list[index]=self.TD_list[index][1:]
-                self.step_counter.value+=1
             if self.MA==True:
                 r,done=self.reward_done_func_ma(r,done)
             self.reward[p]=r+self.reward[p]
@@ -482,7 +480,6 @@ class RL_pytorch:
                 self.done_pool_list.append(None)
             self.reward=np.zeros(processes,dtype='float32')
             self.reward=Array('f',self.reward)
-            self.step_counter=Value('i',0)
             if self.HER!=True:
                 lock_list=[mp.Lock() for _ in range(processes)]
             else:
@@ -547,6 +544,7 @@ class RL_pytorch:
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
                     loss=self.train1(self.optimizer_)
+                    self.step_counter+=1
                 else:
                     loss=self.train2(self.optimizer_)
                 self.loss=loss
@@ -613,6 +611,7 @@ class RL_pytorch:
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
                     loss=self.train1(self.optimizer_)
+                    self.step_counter+=1
                 else:
                     loss=self.train2(self.optimizer_)
                 self.loss=loss
