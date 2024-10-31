@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 import multiprocessing
 from Note.RL import rl
 from Note.RL.rl.prioritized_replay import pr_
-from multiprocessing import Array,Value
+from multiprocessing import Array
 import numpy as np
 import numpy.ctypeslib as npc
 import matplotlib.pyplot as plt
