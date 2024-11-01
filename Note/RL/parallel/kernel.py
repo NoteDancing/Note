@@ -197,6 +197,8 @@ class kernel:
                 a=self.policy.select_action(len(output), output)
             elif isinstance(self.policy, rl.EpsGreedyQPolicy):
                 a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
+                a=self.policy.select_action(output, self.step_counter[p])
             elif isinstance(self.policy, rl.GreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannQPolicy):
@@ -204,7 +206,7 @@ class kernel:
             elif isinstance(self.policy, rl.MaxBoltzmannQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
-                a=self.policy.select_action(output, np.sum(self.step_counter))
+                a=self.policy.select_action(output, self.step_counter[p])
         else:
             s=np.expand_dims(s,axis=0)
             a=(self.forward(s)+self.noise.sample()).numpy()
@@ -511,6 +513,7 @@ class kernel:
                     self.nn.opt_counter[0]=opt_counter
             if self.PO==1 or self.PO==2:
                 lock[1].acquire()
+            self.step_counter[p]+=1
             if self.update_steps!=None:
                 if self.step_counter[p]%self.update_steps==0:
                     self.nn.update_param()
@@ -525,7 +528,6 @@ class kernel:
             if self.PO==1 or self.PO==2:
                 lock[1].release()
             self.loss[p]=self.loss[p]/batches
-        self.step_counter[p]+=1
         self.nn.ec[0]=sum(self._episode_counter)+self.ec
         _episode_counter=self._episode_counter[p]
         _episode_counter.assign_add(1)
