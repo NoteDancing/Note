@@ -223,6 +223,7 @@ class kernel:
         r=np.array(r)
         done=np.array(done)
         self.pool(s,a,next_s,r,done,pool_lock,index)
+        self.step_counter[p]+=1
         return next_s,r,done
     
     
@@ -513,7 +514,6 @@ class kernel:
                     self.nn.opt_counter[0]=opt_counter
             if self.PO==1 or self.PO==2:
                 lock[1].acquire()
-            self.step_counter[p]+=1
             if self.update_steps!=None:
                 if self.step_counter[p]%self.update_steps==0:
                     self.nn.update_param()
