@@ -229,6 +229,7 @@ class RL_pytorch:
                 return np.array(0.)
         else:
             loss=0
+            self.step_counter+=1
             batches=int((len(self.state_pool)-len(self.state_pool)%self.batch)/self.batch)
             if len(self.state_pool)%self.batch!=0:
                 batches+=1
@@ -311,7 +312,6 @@ class RL_pytorch:
             r=np.array(r)
             done=np.array(done)
             self.pool(s,a,next_s,r,done)
-            self.step_counter+=1
             if self.PR==True:
                 if len(self.state_pool)>1:
                     self.prioritized_replay.TD=np.append(self.prioritized_replay.TD,self.initial_TD)
@@ -527,7 +527,6 @@ class RL_pytorch:
                         process_list.append(process)
                     for process in process_list:
                         process.join()
-                    self.step_counter+=1
                     if processes_her==None and processes_pr==None:
                         self.state_pool=np.concatenate(self.state_pool_list)
                         self.action_pool=np.concatenate(self.action_pool_list)
@@ -594,7 +593,6 @@ class RL_pytorch:
                         process_list.append(process)
                     for process in process_list:
                         process.join()
-                    self.step_counter+=1
                     if processes_her==None and processes_pr==None:
                         self.state_pool=np.concatenate(self.state_pool_list)
                         self.action_pool=np.concatenate(self.action_pool_list)
