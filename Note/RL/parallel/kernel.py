@@ -14,18 +14,13 @@ class kernel:
     def __init__(self,nn=None,process=None):
         self.nn=nn
         self.nn.km=1
-        if process!=None:
-            self.reward=np.zeros(process,dtype='float32')
-            if process>self.process:
-                self.step_counter=np.concatenate((self.step_counter,np.zeros(process-self.process,dtype='int32')))
-            else:
-                self.step_counter=np.zeros(process,dtype='int32')
-            self.process=process
+        self.step_counter=None
         self.pool_size=None
         self.episode=None
         self.batch=None
         self.update_steps=None
         self.trial_count=None
+        self.process=process
         self.PO=3
         self.priority_flag=False
         self.max_opt=None
@@ -44,10 +39,13 @@ class kernel:
         self.next_state_pool=manager.dict({})
         self.reward_pool=manager.dict({})
         self.done_pool=manager.dict({})
-        self.reward=Array('f',self.reward)
+        self.reward=Array('f',np.zeros(self.process,dtype='float32'))
         self.loss=np.zeros(self.process,dtype='float32')
         self.loss=Array('f',self.loss)
-        self.step_counter=Array('i',self.step_counter)
+        if self.step_counter==None:
+            self.step_counter=Array('i',np.zeros(self.process,dtype='int32'))
+        elif self.process>len(self.step_counter):
+            self.step_counter=Array('i',np.concatenate((self.step_counter,np.zeros(self.process-len(self.step_counter),dtype='int32'))))
         self.process_counter=Value('i',0)
         self.finish_list=manager.list([])
         self.reward_list=manager.list([])
