@@ -16,16 +16,16 @@ class kernel:
         self.nn.km=1
         if process!=None:
             self.reward=np.zeros(process,dtype='float32')
-            if self.process!=None and process>self.process:
+            if process>self.process:
                 self.step_counter=np.concatenate((self.step_counter,np.zeros(process-self.process,dtype='int32')))
             else:
                 self.step_counter=np.zeros(process,dtype='int32')
+            self.process=process
         self.pool_size=None
         self.episode=None
         self.batch=None
         self.update_steps=None
         self.trial_count=None
-        self.process=process
         self.PO=3
         self.priority_flag=False
         self.max_opt=None
