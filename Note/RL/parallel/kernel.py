@@ -44,7 +44,10 @@ class kernel:
         self.reward=Array('f',self.reward)
         self.loss=np.zeros(self.process,dtype='float32')
         self.loss=Array('f',self.loss)
-        self.step_counter=Array('i',self.step_counter)
+        if self.process>len(self.step_counter):
+            self.step_counter=Array('i',np.concatenate((self.step_counter,np.zeros(self.process-len(self.step_counter),dtype='int32'))))
+        else:
+            self.step_counter=Array('i',self.step_counter)
         self.process_counter=Value('i',0)
         self.finish_list=manager.list([])
         self.reward_list=manager.list([])
@@ -198,7 +201,7 @@ class kernel:
             elif isinstance(self.policy, rl.EpsGreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
-                a=self.policy.select_action(output, self.step_counter[p])
+                a=self.policy.select_action(output, np.sum(self.step_counter))
             elif isinstance(self.policy, rl.GreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannQPolicy):
@@ -206,7 +209,7 @@ class kernel:
             elif isinstance(self.policy, rl.MaxBoltzmannQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
-                a=self.policy.select_action(output, self.step_counter[p])
+                a=self.policy.select_action(output, np.sum(self.step_counter))
         else:
             s=np.expand_dims(s,axis=0)
             a=(self.forward(s)+self.noise.sample()).numpy()
@@ -223,7 +226,6 @@ class kernel:
         r=np.array(r)
         done=np.array(done)
         self.pool(s,a,next_s,r,done,pool_lock,index)
-        self.step_counter[p]+=1
         return next_s,r,done
     
     
@@ -484,6 +486,7 @@ class kernel:
         else:
             self.loss[p]=0
             length=len(self.done_pool[p])
+            self.step_counter[p]+=1
             batches=int((length-length%self.batch)/self.batch)
             if length%self.batch!=0:
                 batches+=1
