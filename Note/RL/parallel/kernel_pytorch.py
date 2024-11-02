@@ -13,9 +13,7 @@ class kernel:
     def __init__(self,nn=None,process=None,device='GPU'):
         self.nn=nn
         self.nn.km=1
-        if process!=None:
-            self.reward=np.zeros(process,dtype=np.float32)
-            self.step_counter=np.zeros(process,dtype=np.int32)
+        self.step_counter=None
         self.device=device
         self.pool_size=None
         self.episode=None
@@ -39,10 +37,13 @@ class kernel:
         self.next_state_pool=manager.dict({})
         self.reward_pool=manager.dict({})
         self.done_pool=manager.dict({})
-        self.reward=Array('f',self.reward)
+        self.reward=Array('f',np.zeros(self.process,dtype='float32'))
         self.loss=np.zeros(self.process,dtype=np.float32)
         self.loss=Array('f',self.loss)
-        self.step_counter=Array('i',self.step_counter)
+        if self.step_counter==None:
+            self.step_counter=Array('i',np.zeros(self.process,dtype='int32'))
+        elif self.process>len(self.step_counter):
+            self.step_counter=Array('i',np.concatenate((self.step_counter,np.zeros(self.process-len(self.step_counter),dtype='int32'))))
         self.process_counter=Value('i',0)
         self.finish_list=manager.list([])
         self.reward_list=manager.list([])
@@ -182,6 +183,8 @@ class kernel:
                 a=self.policy.select_action(len(output), output)
             elif isinstance(self.policy, rl.EpsGreedyQPolicy):
                 a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
+                a=self.policy.select_action(output, np.sum(self.step_counter))
             elif isinstance(self.policy, rl.GreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannQPolicy):
@@ -314,6 +317,7 @@ class kernel:
         else:
             self.loss[p]=0
             length=len(self.done_pool[p])
+            self.step_counter[p]+=1
             batches=int((length-length%self.batch)/self.batch)
             if length%self.batch!=0:
                 batches+=1
@@ -352,7 +356,6 @@ class kernel:
             else:
                 self.nn.update_param()
             self.loss[p]=self.loss[p]/batches
-        self.step_counter[p]+=1
         self.nn.ec[0]=sum(self._episode_counter)+self.ec
         _episode_counter=self._episode_counter[p]
         _episode_counter+=1
