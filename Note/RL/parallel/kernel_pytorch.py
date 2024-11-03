@@ -40,7 +40,7 @@ class kernel:
         self.reward=Array('f',np.zeros(self.process,dtype='float32'))
         self.loss=np.zeros(self.process,dtype=np.float32)
         self.loss=Array('f',self.loss)
-        if self.step_counter==None:
+        if self.step_counter is None:
             self.step_counter=Array('i',np.zeros(self.process,dtype='int32'))
         elif self.process>len(self.step_counter):
             self.step_counter=Array('i',np.concatenate((self.step_counter,np.zeros(self.process-len(self.step_counter),dtype='int32'))))
