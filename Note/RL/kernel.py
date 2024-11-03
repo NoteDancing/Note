@@ -204,6 +204,8 @@ class kernel:
                 a=self.policy.select_action(len(output), output)
             elif isinstance(self.policy, rl.EpsGreedyQPolicy):
                 a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
+                a=self.policy.select_action(output, self.step_counter)
             elif isinstance(self.policy, rl.GreedyQPolicy):
                 a=self.policy.select_action(output)
             elif isinstance(self.policy, rl.BoltzmannQPolicy):
@@ -261,6 +263,7 @@ class kernel:
                 return np.array(0.)
         else:
             loss=0
+            self.step_counter+=1
             batches=int((len(self.state_pool)-len(self.state_pool)%self.batch)/self.batch)
             if len(self.state_pool)%self.batch!=0:
                 batches+=1
@@ -343,7 +346,6 @@ class kernel:
             if hasattr(self.platform,'DType'):
                 self.nn.pr.TD=tf.Variable(self.nn.pr.TD)
             loss=self._train()
-            self.step_counter+=1
             if done:
                 self.reward_list.append(self.reward)
                 if len(self.reward_list)>self.trial_count:
