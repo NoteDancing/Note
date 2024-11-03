@@ -46,6 +46,8 @@ class kernel:
             self.step_counter=Array('i',np.zeros(self.process,dtype='int32'))
         elif self.process>len(self.step_counter):
             self.step_counter=Array('i',np.concatenate((self.step_counter,np.zeros(self.process-len(self.step_counter),dtype='int32'))))
+        else:
+            self.step_counter=Array('i',self.step_counter)
         self.process_counter=Value('i',0)
         self.finish_list=manager.list([])
         self.reward_list=manager.list([])
