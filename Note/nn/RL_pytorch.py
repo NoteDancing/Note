@@ -130,7 +130,10 @@ class RL_pytorch:
             elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
                 a=self.policy.select_action(output, self.step_counter)
         elif self.noise!=None:
-            a=(output+self.noise.sample()).numpy()
+            if self.IRL!=True:
+                a=(output+self.noise.sample()).numpy()
+            else:
+                a=(output[1]+self.noise.sample()).numpy()
         if self.IRL!=True:
             return a
         else:
