@@ -69,15 +69,15 @@ class DQN(nn.RL):
     def __call__(self, s, a, next_s, d):
         """Compute loss using Q-values and IRL-generated rewards."""
         # Expand action dimensions to match Q-net input shape
-        a = tf.expand_dims(a, axis=1)
+        a = tf.expand_dims(a[:,1], axis=1)
         
         # Get Q-value for current state-action pair
-        q_value = tf.gather(self.q_net(s), a, axis=1, batch_dims=1)
-        next_q_value = tf.reduce_max(self.target_q_net(next_s), axis=1)
+        q_value = tf.gather(self.q_net(s[:,1]), a[:,1], axis=1, batch_dims=1)
+        next_q_value = tf.reduce_max(self.target_q_net(next_s[:,1]), axis=1)
         
         # Compute rewards for both expert and agent trajectories
-        expert_reward = self.compute_reward(s, tf.constant([[0]] * s.shape[0]))  # Assume action 0 for expert
-        agent_reward = self.compute_reward(s, a)
+        expert_reward = self.compute_reward(s[:,0], a[:,0])  # Assume action 0 for expert
+        agent_reward = self.compute_reward(s[:,1], a[:,1])
         
         # Compute TD target
         target = tf.cast(agent_reward, 'float32') + 0.98 * next_q_value * (1 - tf.cast(d, 'float32'))
