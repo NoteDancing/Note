@@ -8,7 +8,7 @@ class RewardNet(nn.Model):
         super().__init__()
         self.dense1 = nn.dense(64, state_dim + action_dim, activation='relu')
         self.dense2 = nn.dense(32, 64, activation='relu')
-        self.output_layer = nn.dense(1, 32)
+        self.output_layer = nn.dense(1, 32, activation='sigmoid')
 
     def __call__(self, state_action):
         x = self.dense1(state_action)
@@ -76,7 +76,7 @@ class DQN(nn.RL):
         next_q_value = tf.reduce_max(self.target_q_net(next_s[:,1]), axis=1)
         
         # Compute rewards for both expert and agent trajectories
-        expert_reward = self.compute_reward(s[:,0], a[:,0])  # Assume action 0 for expert
+        expert_reward = self.compute_reward(s[:,0], a[:,0])
         agent_reward = self.compute_reward(s[:,1], a[:,1])
         
         # Compute TD target
@@ -84,7 +84,7 @@ class DQN(nn.RL):
         TD = q_value - target
         
         # Define IRL loss as the difference between expert and agent rewards
-        irl_loss = tf.reduce_mean(expert_reward) - tf.reduce_mean(agent_reward)
+        irl_loss = tf.maximum(0.0, agent_reward - expert_reward + 0.1)
         
         # Combine TD loss and IRL loss
         q_loss = tf.reduce_mean(TD ** 2)
