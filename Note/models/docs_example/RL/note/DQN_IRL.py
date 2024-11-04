@@ -40,7 +40,7 @@ class Env:
 
     def step(self, action):
         next_state, reward, done, _ = self.env.step(action)
-        self.expert_state = 0    # Replace with actual expert state
+        self.expert_state = next_state
         self.state = next_state
         return [self.expert_state, self.state], reward, done, None
 
