@@ -123,34 +123,36 @@ class RL:
     
     
     def select_action(self,s,i=None):
-        if self.IRL!=True:
-            if self.jit_compile==True:
-                output=self.forward(s,i)
+        if self.jit_compile==True:
+            output=self.forward(s,i)
+        else:
+            output=self.forward_(s,i)
+        if self.policy!=None:
+            if self.IRL!=True:
+                output=output.numpy()
             else:
-                output=self.forward_(s,i)
-            if self.policy!=None:
-                if self.IRL!=True:
-                    output=output.numpy()
-                else:
-                    output=output[1].numpy()
-                output=np.squeeze(output, axis=0)
-                if isinstance(self.policy, rl.SoftmaxPolicy):
-                    a=self.policy.select_action(len(output), output)
-                elif isinstance(self.policy, rl.EpsGreedyQPolicy):
-                    a=self.policy.select_action(output)
-                elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
-                    a=self.policy.select_action(output, self.step_counter)
-                elif isinstance(self.policy, rl.GreedyQPolicy):
-                    a=self.policy.select_action(output)
-                elif isinstance(self.policy, rl.BoltzmannQPolicy):
-                    a=self.policy.select_action(output)
-                elif isinstance(self.policy, rl.MaxBoltzmannQPolicy):
-                    a=self.policy.select_action(output)
-                elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
-                    a=self.policy.select_action(output, self.step_counter)
-            elif self.noise!=None:
-                a=(output+self.noise.sample()).numpy()            
-        return a
+                output=output[1].numpy()
+            output=np.squeeze(output, axis=0)
+            if isinstance(self.policy, rl.SoftmaxPolicy):
+                a=self.policy.select_action(len(output), output)
+            elif isinstance(self.policy, rl.EpsGreedyQPolicy):
+                a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.AdaptiveEpsGreedyPolicy):
+                a=self.policy.select_action(output, self.step_counter)
+            elif isinstance(self.policy, rl.GreedyQPolicy):
+                a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.BoltzmannQPolicy):
+                a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.MaxBoltzmannQPolicy):
+                a=self.policy.select_action(output)
+            elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
+                a=self.policy.select_action(output, self.step_counter)
+        elif self.noise!=None:
+            a=(output+self.noise.sample()).numpy()            
+        if self.IRL!=True:
+            return a
+        else:
+            return [output[0],a]
     
     
     def env_(self,a=None,initial=None,p=None):
