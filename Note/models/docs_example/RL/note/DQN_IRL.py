@@ -84,7 +84,7 @@ class DQN(nn.RL):
         TD = q_value - target
         
         # Define IRL loss as the difference between expert and agent rewards
-        irl_loss = tf.maximum(0.0, agent_reward - expert_reward + 0.1)
+        irl_loss = tf.maximum(0.0, 1+agent_reward - expert_reward)
         
         # Combine TD loss and IRL loss
         q_loss = tf.reduce_mean(TD ** 2)
