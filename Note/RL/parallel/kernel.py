@@ -86,7 +86,7 @@ class kernel:
         return
     
     
-    def set_up(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False):
+    def set_up(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,IRL=False):
         if policy!=None:
             self.policy=policy
         if noise!=None:
@@ -104,6 +104,7 @@ class kernel:
             self.criterion=criterion
         self.PPO=PPO
         self.HER=HER
+        self.IRL=IRL
         return
     
     
@@ -192,9 +193,13 @@ class kernel:
     
     
     def store(self,s,p,lock,pool_lock):
+        s=np.expand_dims(s,axis=0)
+        output=self.forward(s)
         if hasattr(self.nn,'nn'):
-            s=np.expand_dims(s,axis=0)
-            output=self.forward(s).numpy()
+            if self.IRL!=True:
+                output=output.numpy()
+            else:
+                output=output[1].numpy()
             output=np.squeeze(output, axis=0)
             if isinstance(self.policy, rl.SoftmaxPolicy):
                 a=self.policy.select_action(len(output), output)
@@ -211,8 +216,10 @@ class kernel:
             elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
                 a=self.policy.select_action(output, np.sum(self.step_counter))
         else:
-            s=np.expand_dims(s,axis=0)
-            a=(self.forward(s)+self.noise.sample()).numpy()
+            if self.IRL!=True:
+                a=(output+self.noise.sample()).numpy()
+            else:
+                a=(output[1]+self.noise.sample()).numpy()
         next_s,r,done=self.nn.env(a,p)
         if self.HER!=True or hasattr(self.nn,'pr')!=True:
             if type(self.state_pool[p])!=np.ndarray and self.state_pool[p]==None:
@@ -225,6 +232,8 @@ class kernel:
         next_s=np.array(next_s)
         r=np.array(r)
         done=np.array(done)
+        if self.IRL==True:
+            a=[output[0],a]
         self.pool(s,a,next_s,r,done,pool_lock,index)
         return next_s,r,done
     
