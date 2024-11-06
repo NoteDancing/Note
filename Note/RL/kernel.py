@@ -64,7 +64,7 @@ class kernel:
         return
     
     
-    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False):
+    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,IRL=False):
         if policy!=None:
             self.policy=policy
         if noise!=None:
@@ -82,6 +82,7 @@ class kernel:
             self.criterion=criterion
         self.PPO=PPO
         self.HER=HER
+        self.IRL=IRL
         return
     
     
@@ -195,10 +196,18 @@ class kernel:
     def select_action(self,s):
         if hasattr(self.nn,'nn'):
             if hasattr(self.platform,'DType'):
-                output=self.forward(s).numpy()
+                output=self.forward(s)
+                if self.IRL!=True:
+                    output=output.numpy()
+                else:
+                    output=output[1].numpy()
             else:
                 s=self.platform.tensor(s,dtype=self.platform.float).to(self.nn.device)
-                output=self.nn.nn(s).detach().numpy()
+                output=self.nn.nn(s)
+                if self.IRL!=True:
+                    output=output.detach().numpy()
+                else:
+                    output=output[1].detach().numpy()
             output=np.squeeze(output, axis=0)
             if isinstance(self.policy, rl.SoftmaxPolicy):
                 a=self.policy.select_action(len(output), output)
@@ -216,11 +225,22 @@ class kernel:
                 a=self.policy.select_action(output, self.step_counter)
         else:
             if hasattr(self.platform,'DType'):
-                a=(self.forward(s)+self.noise.sample()).numpy()
+                output=self.forward(s)
+                if self.IRL!=True:
+                    a=(output+self.noise.sample()).numpy()
+                else:
+                    a=(output[1]+self.noise.sample()).numpy()
             else:
                 s=self.platform.tensor(s,dtype=self.platform.float).to(self.nn.device)
-                a=(self.nn.actor(s)+self.noise.sample()).detach().numpy()
-        return a
+                output=self.nn.actor(s)
+                if self.IRL!=True:
+                    a=(output+self.noise.sample()).detach().numpy()
+                else:
+                    a=(output[1]+self.noise.sample()).detach().numpy()
+        if self.IRL!=True:
+            return a
+        else:
+            return [output[0],a]
     
     
     def data_func(self):
