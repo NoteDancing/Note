@@ -1,5 +1,6 @@
 import tensorflow as tf
 from Note import nn
+import numpy as np
 import gym
 
 class RewardNet(nn.Model):
@@ -39,7 +40,8 @@ class Env:
         return self.state
 
     def step(self, action):
-        next_state, reward, done, _ = self.env.step(action)
+        next_state, _, done, _ = self.env.step(action)
+        reward = self.compute_reward(np.expand_dims(self.state,axis=0), np.expand_dims(action,axis=0))
         self.expert_state = next_state
         self.state = next_state
         return [self.expert_state, self.state], reward, done, None
@@ -53,18 +55,18 @@ class DQN(nn.RL):
         self.reward_net = RewardNet(state_dim, action_dim)
         self.param = [self.q_net.param,self.reward_net.param]
         self.env = Env()
+        def compute_reward(self, state, action):
+            """Compute reward using the RewardNet."""
+            state_action = tf.concat([state, action], axis=1)
+            reward = self.reward_net(state_action)
+            return tf.squeeze(reward, axis=-1)
+        self.env.compute_reward = compute_reward
     
     def action(self, s):
         """Return both expert action and agent's action."""
         expert_action = 0  # Placeholder, replace with actual expert action logic
         agent_action = self.q_net(s)
         return [expert_action, agent_action]
-    
-    def compute_reward(self, state, action):
-        """Compute reward using the RewardNet."""
-        state_action = tf.concat([state, action], axis=1)
-        reward = self.reward_net(state_action)
-        return tf.squeeze(reward, axis=-1)
     
     def __call__(self, s, a, next_s, d):
         """Compute loss using Q-values and IRL-generated rewards."""
