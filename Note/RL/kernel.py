@@ -15,8 +15,6 @@ class kernel:
         self.nn=nn
         if hasattr(self.nn,'km'):
             self.nn.km=1
-        if hasattr(self.nn,'pr'):
-            self.nn.pr.pool_network=False
         self.platform=None
         self.state_pool=None
         self.action_pool=None
@@ -64,7 +62,7 @@ class kernel:
         return
     
     
-    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,IRL=False):
+    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,PR=None,IRL=None):
         if policy!=None:
             self.policy=policy
         if noise!=None:
@@ -80,9 +78,15 @@ class kernel:
             self.trial_count=trial_count
         if criterion!=None:
             self.criterion=criterion
-        self.PPO=PPO
-        self.HER=HER
-        self.IRL=IRL
+        if self.PPO!=None:
+            self.PPO=PPO
+        if self.HER!=None:
+            self.HER=HER
+        if self.PR!=None:
+            self.PR=PR
+            self.nn.pr.pool_network=False
+        if self.IRL!=None:
+            self.IRL=IRL
         return
     
     
@@ -244,7 +248,7 @@ class kernel:
     
     
     def data_func(self):
-        if hasattr(self.nn,'pr'):
+        if self.PR:
             s,a,next_s,r,d=self.nn.data_func(self.state_pool,self.action_pool,self.next_state_pool,self.reward_pool,self.done_pool,self.batch)
         elif self.HER:
             s = []
@@ -287,7 +291,7 @@ class kernel:
             batches=int((len(self.state_pool)-len(self.state_pool)%self.batch)/self.batch)
             if len(self.state_pool)%self.batch!=0:
                 batches+=1
-            if hasattr(self.nn,'pr') or self.HER==True:
+            if self.PR or self.HER==True:
                 for j in range(batches):
                     self.suspend_func()
                     state_batch,action_batch,next_state_batch,reward_batch,done_batch=self.data_func()
@@ -358,7 +362,7 @@ class kernel:
                 r=np.array(r)
                 done=np.array(done)
             self.pool(s,a,next_s,r,done)
-            if hasattr(self.nn,'pr'):
+            if self.PR:
                 self.nn.pr.TD=np.append(self.nn.pr.TD,self.nn.initial_TD)
                 if len(self.state_pool)>self.pool_size:
                     self.nn.pr.TD=self.nn.pr.TD[1:]
@@ -631,9 +635,17 @@ class kernel:
                     os.remove(self.path_list[0])
                     del self.path_list[0]
             pickle.dump(self.nn,output_file)
+            pickle.dump(self.policy,output_file)
+            pickle.dump(self.noise,output_file)
             pickle.dump(self.pool_size,output_file)
             pickle.dump(self.batch,output_file)
             pickle.dump(self.update_steps,output_file)
+            pickle.dump(self.trial_count,output_file)
+            pickle.dump(self.criterion,output_file)
+            pickle.dump(self.PPO,output_file)
+            pickle.dump(self.HER,output_file)
+            pickle.dump(self.PR,output_file)
+            pickle.dump(self.IRL,output_file)
             pickle.dump(self.reward_list,output_file)
             pickle.dump(self.loss,output_file)
             pickle.dump(self.loss_list,output_file)
@@ -654,9 +666,17 @@ class kernel:
     def save(self,path):
         output_file=open(path,'wb')
         pickle.dump(self.nn,output_file)
+        pickle.dump(self.policy,output_file)
+        pickle.dump(self.noise,output_file)
         pickle.dump(self.pool_size,output_file)
         pickle.dump(self.batch,output_file)
         pickle.dump(self.update_steps,output_file)
+        pickle.dump(self.trial_count,output_file)
+        pickle.dump(self.criterion,output_file)
+        pickle.dump(self.PPO,output_file)
+        pickle.dump(self.HER,output_file)
+        pickle.dump(self.PR,output_file)
+        pickle.dump(self.IRL,output_file)
         pickle.dump(self.reward_list,output_file)
         pickle.dump(self.loss,output_file)
         pickle.dump(self.loss_list,output_file)
@@ -672,9 +692,17 @@ class kernel:
         self.nn=pickle.load(input_file)
         if hasattr(self.nn,'km'):
             self.nn.km=1
+        self.policy=pickle.load(input_file)
+        self.noise=pickle.load(input_file)
         self.pool_size=pickle.load(input_file)
         self.batch=pickle.load(input_file)
         self.update_steps=pickle.load(input_file)
+        self.trial_count=pickle.load(input_file)
+        self.criterion=pickle.load(input_file)
+        self.PPO=pickle.load(input_file)
+        self.HER=pickle.load(input_file)
+        self.PR=pickle.load(input_file)
+        self.IRL=pickle.load(input_file)
         self.reward_list=pickle.load(input_file)
         self.loss=pickle.load(input_file)
         self.loss_list=pickle.load(input_file)
