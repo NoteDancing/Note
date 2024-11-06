@@ -179,7 +179,11 @@ class kernel:
         if hasattr(self.nn,'nn'):
             s=np.expand_dims(s,axis=0)
             s=torch.tensor(s,dtype=torch.float).to(assign_device(p,self.device))
-            output=self.nn.nn(s).detach().numpy()
+            output=self.nn.nn(s)
+            if self.IRL!=True:
+                output=output.detach().numpy()
+            else:
+                output=output[1].detach().numpy()
             output=np.squeeze(output, axis=0)
             if isinstance(self.policy, rl.SoftmaxPolicy):
                 a=self.policy.select_action(len(output), output)
@@ -198,7 +202,11 @@ class kernel:
         else:
             s=np.expand_dims(s,axis=0)
             s=torch.tensor(s,dtype=torch.float).to(assign_device(p,self.device))
-            a=(self.nn.actor(s)+self.noise.sample()).detach().numpy()
+            output=self.nn.actor(s)
+            if self.IRL!=True:
+                a=(output+self.noise.sample()).detach().numpy()
+            else:
+                a=(output[1]+self.noise.sample()).detach().numpy()
         next_s,r,done=self.nn.env(a,p)
         if self.HER!=True or hasattr(self.nn,'pr')!=True:
             if type(self.state_pool[p])!=np.ndarray and self.state_pool[p]==None:
@@ -211,6 +219,8 @@ class kernel:
         next_s=np.array(next_s)
         r=np.array(r)
         done=np.array(done)
+        if self.IRL==True:
+            a=[output[0],a]
         self.pool(s,a,next_s,r,done,pool_lock,index)
         return next_s,r,done
     
