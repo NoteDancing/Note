@@ -56,7 +56,7 @@ class kernel:
         self.total_episode=Value('i',0)
         self.priority_p=Value('i',0)
         self.inverse_len=manager.list([0 for _ in range(self.process)])
-        if hasattr(self.nn,'pr'):
+        if self.PR:
             self.nn.pr.TD=manager.list([[self.nn.initial_TD] for _ in range(self.process)])
         if self.priority_flag==True:
             self.opt_counter=Array('i',np.zeros(self.process,dtype='int32'))
@@ -86,7 +86,7 @@ class kernel:
         return
     
     
-    def set_up(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,IRL=False):
+    def set_up(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,PR=None,IRL=None):
         if policy!=None:
             self.policy=policy
         if noise!=None:
@@ -102,9 +102,14 @@ class kernel:
             self.trial_count=trial_count
         if criterion!=None:
             self.criterion=criterion
-        self.PPO=PPO
-        self.HER=HER
-        self.IRL=IRL
+        if self.PPO!=None:
+            self.PPO=PPO
+        if self.HER!=None:
+            self.HER=HER
+        if self.PR!=None:
+            self.PR=PR
+        if self.IRL!=None:
+            self.IRL=IRL
         return
     
     
@@ -134,7 +139,7 @@ class kernel:
     
     
     def pool(self,s,a,next_s,r,done,pool_lock,index):
-        if self.HER!=True or hasattr(self.nn,'pr')!=True:
+        if self.HER!=True or self.PR!=True:
             pool_lock[index].acquire()
         try:
             if type(self.state_pool[index])!=np.ndarray and self.state_pool[index]==None:
@@ -159,10 +164,10 @@ class kernel:
                 self.reward_pool[index]=self.reward_pool[index][1:]
                 self.done_pool[index]=self.done_pool[index][1:]
         except Exception:
-            if self.HER!=True or hasattr(self.nn,'pr')!=True:
+            if self.HER!=True or self.PR!=True:
                 pool_lock[index].release()
             return
-        if self.HER!=True or hasattr(self.nn,'pr')!=True:
+        if self.HER!=True or self.PR!=True:
             pool_lock[index].release()
         return
     
@@ -221,7 +226,7 @@ class kernel:
             else:
                 a=(output[1]+self.noise.sample()).numpy()
         next_s,r,done=self.nn.env(a,p)
-        if self.HER!=True or hasattr(self.nn,'pr')!=True:
+        if self.HER!=True or self.PR!=True:
             if type(self.state_pool[p])!=np.ndarray and self.state_pool[p]==None:
                 index=p
                 self.inverse_len[index]=1
@@ -421,7 +426,7 @@ class kernel:
     
     def _train(self,p,j,batches,length,lock,g_lock):
         if j==batches-1:
-            if hasattr(self.nn,'pr'):
+            if self.PR:
                 state_batch,action_batch,next_state_batch,reward_batch,done_batch=self.nn.data_func(self.state_pool[p],self.action_pool[p],self.next_state_pool[p],self.reward_pool[p],self.done_pool[p],self.batch,p)
             elif self.HER:
                 state_batch,action_batch,next_state_batch,reward_batch,done_batch=self.data_func(p)
@@ -454,7 +459,7 @@ class kernel:
             _batch_counter.assign_add(1)
             self._batch_counter[p]=_batch_counter
         else:
-            if hasattr(self.nn,'pr'):
+            if self.PR:
                 state_batch,action_batch,next_state_batch,reward_batch,done_batch=self.nn.data_func(self.state_pool[p],self.action_pool[p],self.next_state_pool[p],self.reward_pool[p],self.done_pool[p],self.batch,p)
             elif self.HER:
                 state_batch,action_batch,next_state_batch,reward_batch,done_batch=self.data_func(p)
@@ -575,7 +580,7 @@ class kernel:
                 next_s,r,done=self.store(s,p,lock,pool_lock)
                 self.reward[p]+=r
                 s=next_s
-                if hasattr(self.nn,'pr'):
+                if self.PR:
                     self.nn.pr.TD[p]=np.append(self.nn.pr.TD[p],self.nn.initial_TD)
                     if len(self.state_pool[p])>self.pool_size:
                         self.nn.pr.TD[p]=self.nn.pr.TD[p][1:]
@@ -829,10 +834,18 @@ class kernel:
             self._batch_counter=list(self._batch_counter)
             self.nn.optimizer.convert_to_list()
             pickle.dump(self.nn,output_file)
+            pickle.dump(self.policy,output_file)
+            pickle.dump(self.noise,output_file)
             pickle.dump(self.pool_size,output_file)
             pickle.dump(self.batch,output_file)
             pickle.dump(np.array(self.step_counter,dtype='int32'),output_file)
             pickle.dump(self.update_steps,output_file)
+            pickle.dump(self.trial_count,output_file)
+            pickle.dump(self.criterion,output_file)
+            pickle.dump(self.PPO,output_file)
+            pickle.dump(self.HER,output_file)
+            pickle.dump(self.PR,output_file)
+            pickle.dump(self.IRL,output_file)
             pickle.dump(list(self.reward_list),output_file)
             pickle.dump(list(self.loss_list),output_file)
             pickle.dump(self.total_episode.value,output_file)
@@ -857,10 +870,18 @@ class kernel:
         self._batch_counter=list(self._batch_counter)
         self.nn.optimizer.convert_to_list()
         pickle.dump(self.nn,output_file)
+        pickle.dump(self.policy,output_file)
+        pickle.dump(self.noise,output_file)
         pickle.dump(self.pool_size,output_file)
         pickle.dump(self.batch,output_file)
         pickle.dump(np.array(self.step_counter,dtype='int32'),output_file)
         pickle.dump(self.update_steps,output_file)
+        pickle.dump(self.trial_count,output_file)
+        pickle.dump(self.criterion,output_file)
+        pickle.dump(self.PPO,output_file)
+        pickle.dump(self.HER,output_file)
+        pickle.dump(self.PR,output_file)
+        pickle.dump(self.IRL,output_file)
         pickle.dump(list(self.reward_list),output_file)
         pickle.dump(list(self.loss_list),output_file)
         pickle.dump(self.total_episode.value,output_file)
@@ -877,11 +898,19 @@ class kernel:
         self.ec=self.nn.ec
         self.bc=self.nn.bc
         self.param[7]=self.nn.param
+        self.policy=pickle.load(input_file)
+        self.noise=pickle.load(input_file)
         self.pool_size=pickle.load(input_file)
         self.batch=pickle.load(input_file)
         self.step_counter=pickle.load(input_file)
         self.step_counter=Array('i',self.step_counter)
         self.update_steps=pickle.load(input_file)
+        self.trial_count=pickle.load(input_file)
+        self.criterion=pickle.load(input_file)
+        self.PPO=pickle.load(input_file)
+        self.HER=pickle.load(input_file)
+        self.PR=pickle.load(input_file)
+        self.IRL=pickle.load(input_file)
         self.reward_list[:]=pickle.load(input_file)
         self.loss_list[:]=pickle.load(input_file)
         self.total_episode.value=pickle.load(input_file)
