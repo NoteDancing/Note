@@ -45,7 +45,7 @@ class Model:
         self.ft_flag=0
         self.ctl_list=Model.ctl_list
         self.ctsl_list=Model.ctsl_list
-        self.optimizer_=None
+        self.optimizer=None
         self.path=None
         self.save_freq=1
         self.save_freq_=None
@@ -56,6 +56,7 @@ class Model:
         self.val_accuracy=1
         self.save_best_only=False
         self.save_param_only=False
+        self.config=dict()
         self.batch_counter=0
         self.path_list=[]
         self.train_loss=None
@@ -75,6 +76,65 @@ class Model:
         self.total_epoch=0
         self.time=0
         self.total_time=0
+    
+    
+    def get_config(self):
+        if self.config_flag==0:
+            self.config['path']=self.path
+            self.config['save_freq']=self.save_freq
+            self.config['save_freq_']=self.save_freq_
+            self.config['max_save_files']=self.max_save_files
+            self.config['steps_per_execution']=self.steps_per_execution
+            self.config['monitor']=self.monitor
+            self.config['val_loss']=self.val_loss
+            self.config['val_accuracy']=self.val_accuracy
+            self.config['save_best_only']=self.save_best_only
+            self.config['save_param_only']=self.save_param_only
+            try:
+                self.config['batch_size']=self.batch_size
+                self.config['loss_object']=self.loss_object
+                self.config['train_loss']=self.train_loss
+                self.config['optimizer']=self.optimizer
+                self.config['epochs']=self.epochs
+                self.config['train_accuracy']=self.train_accuracy
+                self.config['test_loss']=self.test_loss
+                self.config['test_accuracy']=self.test_accuracy
+                self.config['test_batch_size']=self.test_batch_size
+                self.config['processes']=self.processes
+                self.config['parallel_test']=self.parallel_test_
+                self.config['jit_compile']=self.jit_compile
+                self.config['p']=self.p
+            except Exception:
+                pass
+        else:
+            self.config['path']=self.path
+            self.config['save_freq']=self.save_freq
+            self.config['save_freq_']=self.save_freq_
+            self.config['max_save_files']=self.max_save_files
+            self.config['steps_per_execution']=self.steps_per_execution
+            self.config['monitor']=self.monitor
+            self.config['val_loss']=self.val_loss
+            self.config['val_accuracy']=self.val_accuracy
+            self.config['save_best_only']=self.save_best_only
+            self.config['save_param_only']=self.save_param_only
+            try:
+                self.config['loss_object']=self.loss_object
+                self.config['global_batch_size']=self.global_batch_size
+                self.config['optimizer']=self.optimizer
+                self.config['strategy']=self.strategy
+                self.config['epochs']=self.epochs
+                self.config['num_epochs']=self.num_epochs
+                self.config['num_steps_per_epoch']=self.num_steps_per_epoch
+                self.config['train_accuracy']=self.train_accuracy
+                self.config['test_loss']=self.test_loss
+                self.config['test_accuracy']=self.test_accuracy
+                self.config['global_test_batch_size']=self.global_test_batch_size
+                self.config['eval_steps_per_epoch']=self.eval_steps_per_epoch
+                self.config['jit_compile']=self.jit_compile
+                self.config['p']=self.p
+            except Exception:
+                pass
+        return self.config
         
     
     def add():
@@ -515,7 +575,26 @@ class Model:
             mp=multiprocessing
         else:
             mp=None
-        self.optimizer_=optimizer
+        try:
+            self.batch_size=train_ds._batch_size.numpy()
+        except Exception:
+            self.batch_size=None
+        self.loss_object=loss_object
+        self.train_loss=train_loss
+        self.optimizer=optimizer
+        self.epochs=epochs
+        self.train_accuracy=train_accuracy
+        self.test_loss=test_loss
+        self.test_accuracy=test_accuracy
+        try:
+            self.test_batch_size=test_ds._batch_size.numpy()
+        except Exception:
+            self.test_batch_size=None
+        self.processes=processes
+        self.parallel_test_=parallel_test
+        self.jit_compile=jit_compile
+        self.p=p
+        self.config_flag=0
         if epochs!=None:
             for epoch in range(epochs):
                 t1=time.time()
@@ -527,9 +606,9 @@ class Model:
             
                 for train_data, labels in train_ds:
                     if jit_compile==True:
-                        self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer_)
+                        self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
-                        self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer_)
+                        self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     self.batch_counter+=1
                     if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
                         self.train_loss=train_loss.result().numpy()
@@ -596,9 +675,9 @@ class Model:
             
                 for train_data, labels in train_ds:
                     if jit_compile==True:
-                        self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer_)
+                        self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
-                        self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer_)
+                        self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     self.batch_counter+=1
                     if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
                         self.train_loss=train_loss.result().numpy()
@@ -681,7 +760,21 @@ class Model:
             p=int(p)
         if p==0:
             p=1
-        self.optimizer_=optimizer
+        self.loss_object=loss_object
+        self.global_batch_size=global_batch_size
+        self.optimizer=optimizer
+        self.strategy=strategy
+        self.epochs=epochs
+        self.num_epochs=num_epochs
+        self.num_steps_per_epoch=num_steps_per_epoch
+        self.train_accuracy=train_accuracy
+        self.test_loss=test_loss
+        self.test_accuracy=test_accuracy
+        self.global_test_batch_size=global_test_batch_size
+        self.eval_steps_per_epoch=eval_steps_per_epoch
+        self.jit_compile=jit_compile
+        self.p=p
+        self.config_flag=1
         with strategy.scope():
             def compute_loss(self, labels, output):
                 per_example_loss = loss_object(labels, output)
@@ -706,9 +799,9 @@ class Model:
                     num_batches = 0
                     for x in train_dist_dataset:
                         if jit_compile==True:
-                            total_loss += self.distributed_train_step(x, self.optimizer_, train_accuracy, strategy)
+                            total_loss += self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
                         else:
-                            total_loss += self.distributed_train_step_(x, self.optimizer_, train_accuracy, strategy)
+                            total_loss += self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
                         num_batches += 1
                         self.batch_counter+=1
                         if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
@@ -806,9 +899,9 @@ class Model:
                     num_batches = 0
                     for x in train_dist_dataset:
                         if jit_compile==True:
-                            total_loss += self.distributed_train_step(x, self.optimizer_, train_accuracy, strategy)
+                            total_loss += self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
                         else:
-                            total_loss += self.distributed_train_step_(x, self.optimizer_, train_accuracy, strategy)
+                            total_loss += self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
                         num_batches += 1
                         self.batch_counter+=1
                         if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
@@ -1214,9 +1307,9 @@ class Model:
         
         while self.step_in_epoch < num_steps_per_epoch:
             if jit_compile==True:
-                total_loss += self.distributed_train_step(next(iterator), self.optimizer_, train_accuracy, strategy)
+                total_loss += self.distributed_train_step(next(iterator), self.optimizer, train_accuracy, strategy)
             else:
-                total_loss += self.distributed_train_step_(next(iterator), self.optimizer_, train_accuracy, strategy)
+                total_loss += self.distributed_train_step_(next(iterator), self.optimizer, train_accuracy, strategy)
             num_batches += 1
             self.step_in_epoch += 1
             self.batch_counter += 1
@@ -1268,9 +1361,9 @@ class Model:
         
         while self.step_in_epoch < num_steps_per_epoch:
             if jit_compile==True:
-                total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer_, train_accuracy, strategy))
+                total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
             else:
-                total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer_, train_accuracy, strategy))
+                total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
             num_batches += 1
             self.step_in_epoch += 1
             self.batch_counter += 1
@@ -1432,8 +1525,8 @@ class Model:
                 if len(self.path_list)>self.max_save_files:
                     os.remove(self.path_list[0])
                     del self.path_list[0]
-            optimizer_config=tf.keras.optimizers.serialize(self.optimizer_)
-            self.optimizer_=None
+            optimizer_config=tf.keras.optimizers.serialize(self.optimizer)
+            self.optimizer=None
             pickle.dump(self,output_file)
             pickle.dump(optimizer_config,output_file)
             output_file.close()
