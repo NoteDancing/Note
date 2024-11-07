@@ -41,7 +41,7 @@ class RL:
         self.total_time=0
     
     
-    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_batches=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,MA=False,PR=False,IRL=False,epsilon=None,initial_TD=7.,alpha=0.7):
+    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_batches=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,MARL=False,PR=False,IRL=False,epsilon=None,initial_TD=7.,alpha=0.7):
         self.policy=policy
         self.noise=noise
         self.pool_size=pool_size
@@ -52,7 +52,7 @@ class RL:
         self.criterion=criterion
         self.PPO=PPO
         self.HER=HER
-        self.MA=MA
+        self.MARL=MARL
         self.PR=PR
         self.IRL=IRL
         self.epsilon=epsilon
@@ -106,7 +106,7 @@ class RL:
     
     @tf.function(jit_compile=True)
     def forward(self,s,i):
-        if self.MA!=True:
+        if self.MARL!=True:
             output=self.action(s)
         else:
             output=self.action(s,i)
@@ -115,7 +115,7 @@ class RL:
     
     @tf.function
     def forward_(self,s,i):
-        if self.MA!=True:
+        if self.MARL!=True:
             output=self.action(s)
         else:
             output=self.action(s,i)
@@ -596,7 +596,7 @@ class RL:
         s=self.env_(initial=True)
         while True:
             s=np.expand_dims(s,axis=0)
-            if self.MA!=True:
+            if self.MARL!=True:
                 a=self.select_action(s)
             else:
                 a=[]
@@ -614,7 +614,7 @@ class RL:
                     self.prioritized_replay.TD=np.append(self.prioritized_replay.TD,self.initial_TD)
                 if len(self.state_pool)>self.pool_size:
                     self.prioritized_replay.TD=self.prioritized_replay.TD[1:]
-            if self.MA==True:
+            if self.MARL==True:
                 r,done=self.reward_done_func_ma(r,done)
             self.reward=r+self.reward
             if self.PR==True:
@@ -711,7 +711,7 @@ class RL:
             else:
                 index=p
             s=np.expand_dims(s,axis=0)
-            if self.MA!=True:
+            if self.MARL!=True:
                 a=self.select_action(s)
             else:
                 a=[]
@@ -734,7 +734,7 @@ class RL:
                         self.TD_list[index]=np.append(self.TD_list[index],self.initial_TD)
                     if len(self.TD_list[index])>math.ceil(self.pool_size/self.processes):
                         self.TD_list[index]=self.TD_list[index][1:]
-            if self.MA==True:
+            if self.MARL==True:
                 r,done=self.reward_done_func_ma(r,done)
             self.reward[p]=r+self.reward[p]
             if done:
