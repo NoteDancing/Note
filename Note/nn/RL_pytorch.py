@@ -26,7 +26,6 @@ class RL_pytorch:
         self.step_counter=0
         self.prioritized_replay=pr_()
         self.seed=7
-        self.optimizer_=None
         self.path=None
         self.save_freq=1
         self.save_freq_=None
@@ -524,7 +523,7 @@ class RL_pytorch:
                         self.next_state_list.append(None)
                         self.reward_list.append(None)
                         self.done_list.append(None)
-        self.optimizer_=optimizer
+        self.optimizer=optimizer
         if episodes!=None:
             for i in range(episodes):
                 t1=time.time()
@@ -553,9 +552,9 @@ class RL_pytorch:
                     self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
-                    loss=self.train1(self.optimizer_)
+                    loss=self.train1(self.optimizer)
                 else:
-                    loss=self.train2(self.optimizer_)
+                    loss=self.train2(self.optimizer)
                 self.loss=loss
                 self.loss_list.append(loss)
                 self.total_episode+=1
@@ -619,9 +618,9 @@ class RL_pytorch:
                     self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
-                    loss=self.train1(self.optimizer_)
+                    loss=self.train1(self.optimizer)
                 else:
-                    loss=self.train2(self.optimizer_)
+                    loss=self.train2(self.optimizer)
                 self.loss=loss
                 self.loss_list.append(loss)
                 i+=1
