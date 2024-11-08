@@ -43,33 +43,33 @@ class RL:
     
     
     def get_config(self):
+        self.config['policy']=self.policy
+        self.config['noise']=self.noise
+        self.config['pool_size']=self.pool_size
+        self.config['batch']=self.batch
+        self.config['update_batches']=self.update_batches
+        self.config['update_steps']=self.update_steps
+        self.config['trial_count']=self.trial_count
+        self.config['criterion']=self.criterion
+        self.config['PPO']=self.PPO
+        self.config['HER']=self.HER
+        self.config['MARL']=self.MARL
+        self.config['PR']=self.PR
+        self.config['IRL']=self.IRL
+        self.config['epsilon']=self.epsilon
+        self.config['initial_TD']=self.initial_TD
+        self.config['alpha']=self.alpha
+        self.config['path']=self.path
+        self.config['save_freq']=self.save_freq
+        self.config['save_freq_']=self.save_freq_
+        self.config['max_save_files']=self.max_save_files
+        self.config['save_best_only']=self.save_best_only
+        self.config['save_param_only']=self.save_param_only
+        self.config['end_loss']=self.end_loss
+        self.config['total_epoch']=self.total_epoch
+        self.config['time']=self.time
+        self.config['total_time']=self.total_time
         if self.config_flag==0:
-            self.config['policy']=self.policy
-            self.config['noise']=self.noise
-            self.config['pool_size']=self.pool_size
-            self.config['batch']=self.batch
-            self.config['update_batches']=self.update_batches
-            self.config['update_steps']=self.update_steps
-            self.config['trial_count']=self.trial_count
-            self.config['criterion']=self.criterion
-            self.config['PPO']=self.PPO
-            self.config['HER']=self.HER
-            self.config['MARL']=self.MARL
-            self.config['PR']=self.PR
-            self.config['IRL']=self.IRL
-            self.config['epsilon']=self.epsilon
-            self.config['initial_TD']=self.initial_TD
-            self.config['alpha']=self.alpha
-            self.config['path']=self.path
-            self.config['save_freq']=self.save_freq
-            self.config['save_freq_']=self.save_freq_
-            self.config['max_save_files']=self.max_save_files
-            self.config['save_best_only']=self.save_best_only
-            self.config['save_param_only']=self.save_param_only
-            self.config['end_loss']=self.end_loss
-            self.config['total_epoch']=self.total_epoch
-            self.config['time']=self.time
-            self.config['total_time']=self.total_time
             try:
                 self.config['train_loss']=self.train_loss
                 self.config['optimizer']=self.optimizer.name
@@ -84,32 +84,6 @@ class RL:
             except Exception:
                 pass
         else:
-            self.config['policy']=self.policy
-            self.config['noise']=self.noise
-            self.config['pool_size']=self.pool_size
-            self.config['batch']=self.batch
-            self.config['update_batches']=self.update_batches
-            self.config['update_steps']=self.update_steps
-            self.config['trial_count']=self.trial_count
-            self.config['criterion']=self.criterion
-            self.config['PPO']=self.PPO
-            self.config['HER']=self.HER
-            self.config['MARL']=self.MARL
-            self.config['PR']=self.PR
-            self.config['IRL']=self.IRL
-            self.config['epsilon']=self.epsilon
-            self.config['initial_TD']=self.initial_TD
-            self.config['alpha']=self.alpha
-            self.config['path']=self.path
-            self.config['save_freq']=self.save_freq
-            self.config['save_freq_']=self.save_freq_
-            self.config['max_save_files']=self.max_save_files
-            self.config['save_best_only']=self.save_best_only
-            self.config['save_param_only']=self.save_param_only
-            self.config['end_loss']=self.end_loss
-            self.config['total_epoch']=self.total_epoch
-            self.config['time']=self.time
-            self.config['total_time']=self.total_time
             try:
                 self.config['optimizer']=self.optimizer.name
                 self.config['strategy']=self.strategy
