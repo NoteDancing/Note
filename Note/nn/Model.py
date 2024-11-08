@@ -90,6 +90,13 @@ class Model:
             self.config['val_accuracy']=self.val_accuracy
             self.config['save_best_only']=self.save_best_only
             self.config['save_param_only']=self.save_param_only
+            self.config['end_loss']=self.end_loss
+            self.config['end_acc']=self.end_acc
+            self.config['end_test_loss']=self.end_test_loss
+            self.config['end_test_acc']=self.end_test_acc
+            self.config['total_epoch']=self.total_epoch
+            self.config['time']=self.time
+            self.config['total_time']=self.total_time
             try:
                 self.config['batch_size']=self.batch_size
                 self.config['loss_object']=self.loss_object
@@ -117,6 +124,13 @@ class Model:
             self.config['val_accuracy']=self.val_accuracy
             self.config['save_best_only']=self.save_best_only
             self.config['save_param_only']=self.save_param_only
+            self.config['end_loss']=self.end_loss
+            self.config['end_acc']=self.end_acc
+            self.config['end_test_loss']=self.end_test_loss
+            self.config['end_test_acc']=self.end_test_acc
+            self.config['total_epoch']=self.total_epoch
+            self.config['time']=self.time
+            self.config['total_time']=self.total_time
             try:
                 self.config['loss_object']=self.loss_object
                 self.config['global_batch_size']=self.global_batch_size
