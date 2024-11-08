@@ -1,5 +1,6 @@
 import tensorflow as tf
 from Note import nn
+from tensorflow.python.util import nest
 import multiprocessing
 from Note.RL import rl
 from Note.RL.rl.prioritized_replay import pr
@@ -26,19 +27,73 @@ class RL:
         self.step_counter=0
         self.prioritized_replay=pr()
         self.seed=7
-        self.optimizer_=None
         self.path=None
         self.save_freq=1
         self.save_freq_=None
         self.max_save_files=None
         self.save_best_only=False
         self.save_param_only=False
+        self.config=dict()
         self.path_list=[]
         self.loss=None
         self.loss_list=[]
         self.total_episode=0
         self.time=0
         self.total_time=0
+    
+    
+    def get_config(self):
+        if self.config_flag==0:
+            self.config['path']=self.path
+            self.config['save_freq']=self.save_freq
+            self.config['save_freq_']=self.save_freq_
+            self.config['max_save_files']=self.max_save_files
+            self.config['save_best_only']=self.save_best_only
+            self.config['save_param_only']=self.save_param_only
+            self.config['end_loss']=self.end_loss
+            self.config['total_epoch']=self.total_epoch
+            self.config['time']=self.time
+            self.config['total_time']=self.total_time
+            try:
+                self.config['train_loss']=self.train_loss
+                self.config['optimizer']=self.optimizer.name
+                self.config['episodes']=self.episodes
+                self.config['jit_compile']=self.jit_compile
+                self.config['pool_network']=self.pool_network
+                self.config['processes']=self.processes
+                self.config['processes_her']=self.processes_her
+                self.config['processes_pr']=self.processes_pr
+                self.config['shuffle']=self.shuffle
+                self.config['p']=self.p
+            except Exception:
+                pass
+        else:
+            self.config['path']=self.path
+            self.config['save_freq']=self.save_freq
+            self.config['save_freq_']=self.save_freq_
+            self.config['max_save_files']=self.max_save_files
+            self.config['save_best_only']=self.save_best_only
+            self.config['save_param_only']=self.save_param_only
+            self.config['end_loss']=self.end_loss
+            self.config['total_epoch']=self.total_epoch
+            self.config['time']=self.time
+            self.config['total_time']=self.total_time
+            try:
+                self.config['global_batch_size']=self.global_batch_size
+                self.config['optimizer']=self.optimizer.name
+                self.config['strategy']=self.strategy
+                self.config['episodes']=self.episodes
+                self.config['num_episodes']=self.num_episodes
+                self.config['jit_compile']=self.jit_compile
+                self.config['pool_network']=self.pool_network
+                self.config['processes']=self.processes
+                self.config['processes_her']=self.processes_her
+                self.config['processes_pr']=self.processes_pr
+                self.config['shuffle']=self.shuffle
+                self.config['p']=self.p
+            except Exception:
+                pass
+        return self.config
     
     
     def set(self,policy=None,noise=None,pool_size=None,batch=None,update_batches=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,MARL=False,PR=False,IRL=False,epsilon=None,initial_TD=7.,alpha=0.7):
@@ -308,9 +363,9 @@ class RL:
         
         if self.PR==True or self.HER==True:
             if self.jit_compile==True:
-                total_loss = self.distributed_train_step(next(iterator), self.optimizer_)
+                total_loss = self.distributed_train_step(next(iterator), self.optimizer)
             else:
-                total_loss = self.distributed_train_step_(next(iterator), self.optimizer_)
+                total_loss = self.distributed_train_step_(next(iterator), self.optimizer)
             self.batch_counter += 1
             if self.pool_network==True:
                 if self.batch_counter%self.update_batches==0:
@@ -325,9 +380,9 @@ class RL:
         else:
             while self.step_in_epoch < num_steps_per_episode:
               if self.jit_compile==True:
-                  total_loss += self.distributed_train_step(next(iterator), self.optimizer_)
+                  total_loss += self.distributed_train_step(next(iterator), self.optimizer)
               else:
-                  total_loss += self.distributed_train_step_(next(iterator), self.optimizer_)
+                  total_loss += self.distributed_train_step_(next(iterator), self.optimizer)
               num_batches += 1
               self.batch_counter += 1
               self.step_in_episode += 1
@@ -364,9 +419,9 @@ class RL:
         
         if self.PR==True or self.HER==True:
             if self.jit_compile==True:
-                total_loss = coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer_))
+                total_loss = coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer))
             else:
-                total_loss = coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer_))
+                total_loss = coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer))
                 
             self.batch_counter += 1
             if self.pool_network==True:
@@ -382,9 +437,9 @@ class RL:
         else:
             while self.step_in_epoch < num_steps_per_episode:
               if self.jit_compile==True:
-                  total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer_))
+                  total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer))
               else:
-                  total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer_))
+                  total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer))
               num_batches += 1
               self.batch_counter += 1
               self.step_in_episode += 1
@@ -756,12 +811,17 @@ class RL:
             p=int(p)
         if p==0:
             p=1
+        self.train_loss=train_loss
+        self.optimizer=optimizer
+        self.episodes=episodes
         self.jit_compile=jit_compile
         self.pool_network=pool_network
         self.processes=processes
         self.processes_her=processes_her
         self.processes_pr=processes_pr
         self.shuffle=shuffle
+        self.p=p
+        self.config_flag=0
         if pool_network==True:
             mp=multiprocessing
             self.mp=mp
@@ -815,9 +875,6 @@ class RL:
                         self.reward_list.append(None)
                         self.done_list.append(None)
         self.distributed_flag=False
-        self.optimizer_=optimizer
-        self.episodes=episodes
-        self.jit_compile=jit_compile
         if episodes!=None:
             for i in range(episodes):
                 t1=time.time()
@@ -848,9 +905,9 @@ class RL:
                     self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
-                    loss=self.train1(train_loss, self.optimizer_)
+                    loss=self.train1(train_loss, self.optimizer)
                 else:
-                    loss=self.train2(train_loss,self.optimizer_)
+                    loss=self.train2(train_loss,self.optimizer)
                 self.loss=loss
                 self.loss_list.append(loss)
                 self.total_episode+=1
@@ -916,9 +973,9 @@ class RL:
                     self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                     if len(self.reward_list)>self.trial_count:
                         del self.reward_list[0]
-                    loss=self.train1(train_loss, self.optimizer_)
+                    loss=self.train1(train_loss, self.optimizer)
                 else:
-                    loss=self.train2(train_loss,self.optimizer_)
+                    loss=self.train2(train_loss,self.optimizer)
                 self.loss=loss
                 self.loss_list.append(loss)
                 i+=1
@@ -980,12 +1037,20 @@ class RL:
             p=int(p)
         if p==0:
             p=1
+        self.global_batch_size=global_batch_size
+        self.batch=global_batch_size
+        self.optimizer=optimizer
+        self.strategy=strategy
+        self.episodes=episodes
+        self.num_episodes=num_episodes
         self.jit_compile=jit_compile
         self.pool_network=pool_network
         self.processes=processes
         self.processes_her=processes_her
         self.processes_pr=processes_pr
         self.shuffle=shuffle
+        self.p=p
+        self.config_flag=1
         if pool_network==True:
             mp=multiprocessing
             self.mp=mp
@@ -1039,12 +1104,6 @@ class RL:
                         self.reward_list.append(None)
                         self.done_list.append(None)
         self.distributed_flag=True
-        self.global_batch_size=global_batch_size
-        self.batch=global_batch_size
-        self.optimizer_=optimizer
-        self.strategy=strategy
-        self.episodes=episodes
-        self.jit_compile=jit_compile
         with strategy.scope():
             def compute_loss(self, per_example_loss):
                 return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
@@ -1078,9 +1137,9 @@ class RL:
                         self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
-                        loss=self.train1(None, self.optimizer_)
+                        loss=self.train1(None, self.optimizer)
                     else:
-                        loss=self.train2(None,self.optimizer_)
+                        loss=self.train2(None,self.optimizer)
                     self.loss=loss
                     self.loss_list.append(loss)
                     self.total_episode+=1
@@ -1145,9 +1204,9 @@ class RL:
                         self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
-                        loss=self.train1(None, self.optimizer_)
+                        loss=self.train1(None, self.optimizer)
                     else:
-                        loss=self.train2(None,self.optimizer_)
+                        loss=self.train2(None,self.optimizer)
                     self.loss=loss
                     self.loss_list.append(loss)
                     i+=1
@@ -1215,9 +1274,9 @@ class RL:
                         self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
-                        loss=self.train1(None, self.optimizer_)
+                        loss=self.train1(None, self.optimizer)
                     else:
-                        loss=self.train2(None,self.optimizer_)
+                        loss=self.train2(None,self.optimizer)
                         
                     if self.path!=None and episode%self.save_freq==0:
                         if self.save_param_only==False:
@@ -1288,9 +1347,9 @@ class RL:
                         self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
-                        loss=self.train1(None, self.optimizer_)
+                        loss=self.train1(None, self.optimizer)
                     else:
-                        loss=self.train2(None,self.optimizer_)
+                        loss=self.train2(None,self.optimizer)
                         
                     if self.path!=None and episode%self.save_freq==0:
                         if self.save_param_only==False:
@@ -1363,9 +1422,9 @@ class RL:
                         self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
-                        loss=self.train1(None, self.optimizer_)
+                        loss=self.train1(None, self.optimizer)
                     else:
-                        loss=self.train2(None,self.optimizer_)
+                        loss=self.train2(None,self.optimizer)
                         
                     if self.path!=None and episode%self.save_freq==0:
                         if self.save_param_only==False:
@@ -1436,9 +1495,9 @@ class RL:
                         self.reward_list.append(np.mean(npc.as_array(self.reward.get_obj())))
                         if len(self.reward_list)>self.trial_count:
                             del self.reward_list[0]
-                        loss=self.train1(None, self.optimizer_)
+                        loss=self.train1(None, self.optimizer)
                     else:
-                        loss=self.train2(None,self.optimizer_)
+                        loss=self.train2(None,self.optimizer)
                         
                     if self.path!=None and episode%self.save_freq==0:
                         if self.save_param_only==False:
@@ -1533,6 +1592,43 @@ class RL:
         
         if save_path!=None:
             ani.save(save_path, writer=writer, fps=fps)
+        return
+    
+    
+    def summary(self):
+        total_params = 0
+        trainable_params = 0
+        non_trainable_params = 0
+        total_memory = 0  # Memory usage in bytes
+        
+        param_flat=nest.flatten(self.param)
+        for param in param_flat:
+            param_count = tf.size(param).numpy()
+            param_dtype_size = param.dtype.size
+            param_memory = param_count * param_dtype_size
+
+            total_params += param_count
+            total_memory += param_memory
+
+            if param.trainable:
+                trainable_params += param_count
+            else:
+                non_trainable_params += param_count
+
+        def format_memory(bytes_size):
+            units = ['Bytes', 'KB', 'MB', 'GB']
+            index = 0
+            while bytes_size >= 1024 and index < len(units) - 1:
+                bytes_size /= 1024
+                index += 1
+            return f"{bytes_size:.2f} {units[index]}"
+
+        # Print the summary with formatted memory usage
+        print("Model Summary")
+        print("-------------")
+        print(f"Total params: {total_params} ({format_memory(total_memory)})")
+        print(f"Trainable params: {trainable_params} ({format_memory(trainable_params * param_dtype_size)})")
+        print(f"Non-trainable params: {non_trainable_params} ({format_memory(non_trainable_params * param_dtype_size)})")
         return
     
     
