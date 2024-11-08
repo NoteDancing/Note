@@ -44,6 +44,22 @@ class RL:
     
     def get_config(self):
         if self.config_flag==0:
+            self.config['policy']=self.policy
+            self.config['noise']=self.noise
+            self.config['pool_size']=self.pool_size
+            self.config['batch']=self.batch
+            self.config['update_batches']=self.update_batches
+            self.config['update_steps']=self.update_steps
+            self.config['trial_count']=self.trial_count
+            self.config['criterion']=self.criterion
+            self.config['PPO']=self.PPO
+            self.config['HER']=self.HER
+            self.config['MARL']=self.MARL
+            self.config['PR']=self.PR
+            self.config['IRL']=self.IRL
+            self.config['epsilon']=self.epsilon
+            self.config['initial_TD']=self.initial_TD
+            self.config['alpha']=self.alpha
             self.config['path']=self.path
             self.config['save_freq']=self.save_freq
             self.config['save_freq_']=self.save_freq_
@@ -68,6 +84,22 @@ class RL:
             except Exception:
                 pass
         else:
+            self.config['policy']=self.policy
+            self.config['noise']=self.noise
+            self.config['pool_size']=self.pool_size
+            self.config['batch']=self.batch
+            self.config['update_batches']=self.update_batches
+            self.config['update_steps']=self.update_steps
+            self.config['trial_count']=self.trial_count
+            self.config['criterion']=self.criterion
+            self.config['PPO']=self.PPO
+            self.config['HER']=self.HER
+            self.config['MARL']=self.MARL
+            self.config['PR']=self.PR
+            self.config['IRL']=self.IRL
+            self.config['epsilon']=self.epsilon
+            self.config['initial_TD']=self.initial_TD
+            self.config['alpha']=self.alpha
             self.config['path']=self.path
             self.config['save_freq']=self.save_freq
             self.config['save_freq_']=self.save_freq_
@@ -79,7 +111,6 @@ class RL:
             self.config['time']=self.time
             self.config['total_time']=self.total_time
             try:
-                self.config['global_batch_size']=self.global_batch_size
                 self.config['optimizer']=self.optimizer.name
                 self.config['strategy']=self.strategy
                 self.config['episodes']=self.episodes
@@ -1021,7 +1052,7 @@ class RL:
         return
     
     
-    def distributed_training(self, global_batch_size, optimizer, strategy, episodes=None, num_episodes=None, jit_compile=True, pool_network=True, processes=None, processes_her=None, processes_pr=None, shuffle=False, p=None):
+    def distributed_training(self, optimizer, strategy, episodes=None, num_episodes=None, jit_compile=True, pool_network=True, processes=None, processes_her=None, processes_pr=None, shuffle=False, p=None):
         avg_reward=None
         if num_episodes!=None:
             episodes=num_episodes
@@ -1037,8 +1068,6 @@ class RL:
             p=int(p)
         if p==0:
             p=1
-        self.global_batch_size=global_batch_size
-        self.batch=global_batch_size
         self.optimizer=optimizer
         self.strategy=strategy
         self.episodes=episodes
@@ -1106,7 +1135,7 @@ class RL:
         self.distributed_flag=True
         with strategy.scope():
             def compute_loss(self, per_example_loss):
-                return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
+                return tf.nn.compute_average_loss(per_example_loss, global_batch_size=self.batch)
         if isinstance(strategy,tf.distribute.MirroredStrategy):
             if episodes!=None:
                 for i in range(episodes):
