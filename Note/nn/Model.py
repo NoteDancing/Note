@@ -101,7 +101,7 @@ class Model:
                 self.config['batch_size']=self.batch_size
                 self.config['loss_object']=self.loss_object
                 self.config['train_loss']=self.train_loss
-                self.config['optimizer']=self.optimizer.name
+                self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
                 self.config['epochs']=self.epochs
                 self.config['train_accuracy']=self.train_accuracy
                 self.config['test_loss']=self.test_loss
@@ -117,7 +117,7 @@ class Model:
             try:
                 self.config['loss_object']=self.loss_object
                 self.config['global_batch_size']=self.global_batch_size
-                self.config['optimizer']=self.optimizer.name
+                self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
                 self.config['strategy']=self.strategy
                 self.config['epochs']=self.epochs
                 self.config['num_epochs']=self.num_epochs
