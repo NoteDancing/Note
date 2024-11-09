@@ -72,7 +72,10 @@ class RL:
         if self.config_flag==0:
             try:
                 self.config['train_loss']=self.train_loss
-                self.config['optimizer']=self.optimizer.name
+                if type(self.optimizer)==list:
+                    self.config['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
+                else:
+                    self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
                 self.config['episodes']=self.episodes
                 self.config['jit_compile']=self.jit_compile
                 self.config['pool_network']=self.pool_network
@@ -85,7 +88,10 @@ class RL:
                 pass
         else:
             try:
-                self.config['optimizer']=self.optimizer.name
+                if type(self.optimizer)==list:
+                    self.config['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
+                else:
+                    self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
                 self.config['strategy']=self.strategy
                 self.config['episodes']=self.episodes
                 self.config['num_episodes']=self.num_episodes
