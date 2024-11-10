@@ -69,7 +69,7 @@ class RL:
         self.info['total_epoch']=self.total_epoch
         self.info['time']=self.time
         self.info['total_time']=self.total_time
-        if self.config_flag==0:
+        if self.info_flag==0:
             try:
                 self.info['train_loss']=self.train_loss
                 if type(self.optimizer)==list:
@@ -832,7 +832,7 @@ class RL:
         self.processes_pr=processes_pr
         self.shuffle=shuffle
         self.p=p
-        self.config_flag=0
+        self.info_flag=0
         if pool_network==True:
             mp=multiprocessing
             self.mp=mp
@@ -1059,7 +1059,7 @@ class RL:
         self.processes_pr=processes_pr
         self.shuffle=shuffle
         self.p=p
-        self.config_flag=1
+        self.info_flag=1
         if pool_network==True:
             mp=multiprocessing
             self.mp=mp
