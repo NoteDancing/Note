@@ -33,7 +33,7 @@ class RL:
         self.max_save_files=None
         self.save_best_only=False
         self.save_param_only=False
-        self.config=dict()
+        self.info=dict()
         self.path_list=[]
         self.loss=None
         self.loss_list=[]
@@ -42,69 +42,69 @@ class RL:
         self.total_time=0
     
     
-    def get_config(self):
-        self.config['policy']=self.policy
-        self.config['noise']=self.noise
-        self.config['pool_size']=self.pool_size
-        self.config['batch']=self.batch
-        self.config['update_batches']=self.update_batches
-        self.config['update_steps']=self.update_steps
-        self.config['trial_count']=self.trial_count
-        self.config['criterion']=self.criterion
-        self.config['PPO']=self.PPO
-        self.config['HER']=self.HER
-        self.config['MARL']=self.MARL
-        self.config['PR']=self.PR
-        self.config['IRL']=self.IRL
-        self.config['epsilon']=self.epsilon
-        self.config['initial_TD']=self.initial_TD
-        self.config['alpha']=self.alpha
-        self.config['path']=self.path
-        self.config['save_freq']=self.save_freq
-        self.config['save_freq_']=self.save_freq_
-        self.config['max_save_files']=self.max_save_files
-        self.config['save_best_only']=self.save_best_only
-        self.config['save_param_only']=self.save_param_only
-        self.config['end_loss']=self.end_loss
-        self.config['total_epoch']=self.total_epoch
-        self.config['time']=self.time
-        self.config['total_time']=self.total_time
+    def get_info(self):
+        self.info['policy']=self.policy
+        self.info['noise']=self.noise
+        self.info['pool_size']=self.pool_size
+        self.info['batch']=self.batch
+        self.info['update_batches']=self.update_batches
+        self.info['update_steps']=self.update_steps
+        self.info['trial_count']=self.trial_count
+        self.info['criterion']=self.criterion
+        self.info['PPO']=self.PPO
+        self.info['HER']=self.HER
+        self.info['MARL']=self.MARL
+        self.info['PR']=self.PR
+        self.info['IRL']=self.IRL
+        self.info['epsilon']=self.epsilon
+        self.info['initial_TD']=self.initial_TD
+        self.info['alpha']=self.alpha
+        self.info['path']=self.path
+        self.info['save_freq']=self.save_freq
+        self.info['save_freq_']=self.save_freq_
+        self.info['max_save_files']=self.max_save_files
+        self.info['save_best_only']=self.save_best_only
+        self.info['save_param_only']=self.save_param_only
+        self.info['end_loss']=self.end_loss
+        self.info['total_epoch']=self.total_epoch
+        self.info['time']=self.time
+        self.info['total_time']=self.total_time
         if self.config_flag==0:
             try:
-                self.config['train_loss']=self.train_loss
+                self.info['train_loss']=self.train_loss
                 if type(self.optimizer)==list:
-                    self.config['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
+                    self.info['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
                 else:
-                    self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
-                self.config['episodes']=self.episodes
-                self.config['jit_compile']=self.jit_compile
-                self.config['pool_network']=self.pool_network
-                self.config['processes']=self.processes
-                self.config['processes_her']=self.processes_her
-                self.config['processes_pr']=self.processes_pr
-                self.config['shuffle']=self.shuffle
-                self.config['p']=self.p
+                    self.info['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
+                self.info['episodes']=self.episodes
+                self.info['jit_compile']=self.jit_compile
+                self.info['pool_network']=self.pool_network
+                self.info['processes']=self.processes
+                self.info['processes_her']=self.processes_her
+                self.info['processes_pr']=self.processes_pr
+                self.info['shuffle']=self.shuffle
+                self.info['p']=self.p
             except Exception:
                 pass
         else:
             try:
                 if type(self.optimizer)==list:
-                    self.config['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
+                    self.info['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
                 else:
-                    self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
-                self.config['strategy']=self.strategy
-                self.config['episodes']=self.episodes
-                self.config['num_episodes']=self.num_episodes
-                self.config['jit_compile']=self.jit_compile
-                self.config['pool_network']=self.pool_network
-                self.config['processes']=self.processes
-                self.config['processes_her']=self.processes_her
-                self.config['processes_pr']=self.processes_pr
-                self.config['shuffle']=self.shuffle
-                self.config['p']=self.p
+                    self.info['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
+                self.info['strategy']=self.strategy
+                self.info['episodes']=self.episodes
+                self.info['num_episodes']=self.num_episodes
+                self.info['jit_compile']=self.jit_compile
+                self.info['pool_network']=self.pool_network
+                self.info['processes']=self.processes
+                self.info['processes_her']=self.processes_her
+                self.info['processes_pr']=self.processes_pr
+                self.info['shuffle']=self.shuffle
+                self.info['p']=self.p
             except Exception:
                 pass
-        return self.config
+        return self.info
     
     
     def set(self,policy=None,noise=None,pool_size=None,batch=None,update_batches=None,update_steps=None,trial_count=None,criterion=None,PPO=False,HER=False,MARL=False,PR=False,IRL=False,epsilon=None,initial_TD=7.,alpha=0.7):
