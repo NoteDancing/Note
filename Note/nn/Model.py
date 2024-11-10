@@ -96,7 +96,7 @@ class Model:
         self.info['total_epoch']=self.total_epoch
         self.info['time']=self.time
         self.info['total_time']=self.total_time
-        if self.config_flag==0:
+        if self.info_flag==0:
             try:
                 self.info['batch_size']=self.batch_size
                 self.info['loss_object']=self.loss_object
@@ -597,7 +597,7 @@ class Model:
         self.parallel_test_=parallel_test
         self.jit_compile=jit_compile
         self.p=p
-        self.config_flag=0
+        self.info_flag=0
         if epochs!=None:
             for epoch in range(epochs):
                 t1=time.time()
@@ -777,7 +777,7 @@ class Model:
         self.eval_steps_per_epoch=eval_steps_per_epoch
         self.jit_compile=jit_compile
         self.p=p
-        self.config_flag=1
+        self.info_flag=1
         with strategy.scope():
             def compute_loss(self, labels, output):
                 per_example_loss = loss_object(labels, output)
