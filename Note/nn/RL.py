@@ -65,8 +65,7 @@ class RL:
         self.info['max_save_files']=self.max_save_files
         self.info['save_best_only']=self.save_best_only
         self.info['save_param_only']=self.save_param_only
-        self.info['end_loss']=self.end_loss
-        self.info['total_epoch']=self.total_epoch
+        self.info['total_episode']=self.total_episode
         self.info['time']=self.time
         self.info['total_time']=self.total_time
         if self.info_flag==0:
