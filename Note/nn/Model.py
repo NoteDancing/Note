@@ -56,7 +56,7 @@ class Model:
         self.val_accuracy=1
         self.save_best_only=False
         self.save_param_only=False
-        self.config=dict()
+        self.info=dict()
         self.batch_counter=0
         self.path_list=[]
         self.train_loss=None
@@ -78,66 +78,66 @@ class Model:
         self.total_time=0
     
     
-    def get_config(self):
-        self.config['path']=self.path
-        self.config['save_freq']=self.save_freq
-        self.config['save_freq_']=self.save_freq_
-        self.config['max_save_files']=self.max_save_files
-        self.config['steps_per_execution']=self.steps_per_execution
-        self.config['monitor']=self.monitor
-        self.config['val_loss']=self.val_loss
-        self.config['val_accuracy']=self.val_accuracy
-        self.config['save_best_only']=self.save_best_only
-        self.config['save_param_only']=self.save_param_only
-        self.config['end_loss']=self.end_loss
-        self.config['end_acc']=self.end_acc
-        self.config['end_test_loss']=self.end_test_loss
-        self.config['end_test_acc']=self.end_test_acc
-        self.config['total_epoch']=self.total_epoch
-        self.config['time']=self.time
-        self.config['total_time']=self.total_time
+    def get_info(self):
+        self.info['path']=self.path
+        self.info['save_freq']=self.save_freq
+        self.info['save_freq_']=self.save_freq_
+        self.info['max_save_files']=self.max_save_files
+        self.info['steps_per_execution']=self.steps_per_execution
+        self.info['monitor']=self.monitor
+        self.info['val_loss']=self.val_loss
+        self.info['val_accuracy']=self.val_accuracy
+        self.info['save_best_only']=self.save_best_only
+        self.info['save_param_only']=self.save_param_only
+        self.info['end_loss']=self.end_loss
+        self.info['end_acc']=self.end_acc
+        self.info['end_test_loss']=self.end_test_loss
+        self.info['end_test_acc']=self.end_test_acc
+        self.info['total_epoch']=self.total_epoch
+        self.info['time']=self.time
+        self.info['total_time']=self.total_time
         if self.config_flag==0:
             try:
-                self.config['batch_size']=self.batch_size
-                self.config['loss_object']=self.loss_object
-                self.config['train_loss']=self.train_loss
+                self.info['batch_size']=self.batch_size
+                self.info['loss_object']=self.loss_object
+                self.info['train_loss']=self.train_loss
                 if type(self.optimizer)==list:
-                    self.config['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
+                    self.info['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
                 else:
-                    self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
-                self.config['epochs']=self.epochs
-                self.config['train_accuracy']=self.train_accuracy
-                self.config['test_loss']=self.test_loss
-                self.config['test_accuracy']=self.test_accuracy
-                self.config['test_batch_size']=self.test_batch_size
-                self.config['processes']=self.processes
-                self.config['parallel_test']=self.parallel_test_
-                self.config['jit_compile']=self.jit_compile
-                self.config['p']=self.p
+                    self.info['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
+                self.info['epochs']=self.epochs
+                self.info['train_accuracy']=self.train_accuracy
+                self.info['test_loss']=self.test_loss
+                self.info['test_accuracy']=self.test_accuracy
+                self.info['test_batch_size']=self.test_batch_size
+                self.info['processes']=self.processes
+                self.info['parallel_test']=self.parallel_test_
+                self.info['jit_compile']=self.jit_compile
+                self.info['p']=self.p
             except Exception:
                 pass
         else:
             try:
-                self.config['loss_object']=self.loss_object
-                self.config['global_batch_size']=self.global_batch_size
+                self.info['loss_object']=self.loss_object
+                self.info['global_batch_size']=self.global_batch_size
                 if type(self.optimizer)==list:
-                    self.config['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
+                    self.info['optimizer']=[tf.keras.optimizers.serialize(optimizer) for optimizer in self.optimzer]
                 else:
-                    self.config['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
-                self.config['strategy']=self.strategy
-                self.config['epochs']=self.epochs
-                self.config['num_epochs']=self.num_epochs
-                self.config['num_steps_per_epoch']=self.num_steps_per_epoch
-                self.config['train_accuracy']=self.train_accuracy
-                self.config['test_loss']=self.test_loss
-                self.config['test_accuracy']=self.test_accuracy
-                self.config['global_test_batch_size']=self.global_test_batch_size
-                self.config['eval_steps_per_epoch']=self.eval_steps_per_epoch
-                self.config['jit_compile']=self.jit_compile
-                self.config['p']=self.p
+                    self.info['optimizer']=tf.keras.optimizers.serialize(self.optimizer)
+                self.info['strategy']=self.strategy
+                self.info['epochs']=self.epochs
+                self.info['num_epochs']=self.num_epochs
+                self.info['num_steps_per_epoch']=self.num_steps_per_epoch
+                self.info['train_accuracy']=self.train_accuracy
+                self.info['test_loss']=self.test_loss
+                self.info['test_accuracy']=self.test_accuracy
+                self.info['global_test_batch_size']=self.global_test_batch_size
+                self.info['eval_steps_per_epoch']=self.eval_steps_per_epoch
+                self.info['jit_compile']=self.jit_compile
+                self.info['p']=self.p
             except Exception:
                 pass
-        return self.config
+        return self.info
         
     
     def add():
