@@ -86,7 +86,7 @@ class kernel:
         return
     
     
-    def set_up(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,PR=None,IRL=None):
+    def set_up(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,MARL=None,PR=None,IRL=None):
         if policy!=None:
             self.policy=policy
         if noise!=None:
@@ -106,6 +106,8 @@ class kernel:
             self.PPO=PPO
         if self.HER!=None:
             self.HER=HER
+        if self.MARL!=None:
+            self.MARL=MARL
         if self.PR!=None:
             self.PR=PR
         if self.IRL!=None:
@@ -189,17 +191,22 @@ class kernel:
     
     
     @tf.function(jit_compile=True)
-    def forward(self,s):
-        if hasattr(self.nn,'nn'):
-            output=self.nn.nn.fp(s)
+    def forward(self,s,i):
+        if self.MARL!=True:
+            if hasattr(self.nn,'nn'):
+                output=self.nn.nn.fp(s)
+            else:
+                output=self.nn.actor.fp(s)
         else:
-            output=self.nn.actor.fp(s)
+            if hasattr(self.nn,'nn'):
+                output=self.nn.nn.fp(s,i)
+            else:
+                output=self.nn.actor.fp(s,i)
         return output
     
     
-    def store(self,s,p,lock,pool_lock):
-        s=np.expand_dims(s,axis=0)
-        output=self.forward(s)
+    def select_action(self,s,i=None):
+        output=self.forward(s,i)
         if hasattr(self.nn,'nn'):
             if self.IRL!=True:
                 output=output.numpy()
@@ -225,6 +232,22 @@ class kernel:
                 a=(output+self.noise.sample()).numpy()
             else:
                 a=(output[1]+self.noise.sample()).numpy()
+        if self.IRL!=True:
+            return a
+        else:
+            return [output[0],a]
+    
+    
+    def store(self,s,p,lock,pool_lock):
+        s=np.expand_dims(s,axis=0)
+        if self.MARL!=True:
+            a=self.select_action(s)
+        else:
+            a=[]
+            for i in len(s[0]):
+                s=np.expand_dims(s[0][i],axis=0)
+                a.append([self.select_action(s,i)])
+            a=np.array(a)
         next_s,r,done=self.nn.env(a,p)
         if self.HER!=True or self.PR!=True:
             if type(self.state_pool[p])!=np.ndarray and self.state_pool[p]==None:
@@ -237,8 +260,6 @@ class kernel:
         next_s=np.array(next_s)
         r=np.array(r)
         done=np.array(done)
-        if self.IRL==True:
-            a=[output[0],a]
         self.pool(s,a,next_s,r,done,pool_lock,index)
         return next_s,r,done
     
