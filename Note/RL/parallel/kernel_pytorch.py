@@ -80,7 +80,7 @@ class kernel:
         return
     
     
-    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,PR=None,IRL=None):
+    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,MARL=None,PR=None,IRL=None):
         if policy!=None:
             self.policy=policy
         if noise!=None:
@@ -100,6 +100,8 @@ class kernel:
             self.PPO=PPO
         if self.HER!=None:
             self.HER=HER
+        if self.MARL!=None:
+            self.MARL=MARL
         if self.PR!=None:
             self.PR=PR
         if self.IRL!=None:
@@ -181,15 +183,28 @@ class kernel:
         return index
     
     
-    def store(self,s,p,lock,pool_lock):
-        if hasattr(self.nn,'nn'):
-            s=np.expand_dims(s,axis=0)
-            s=torch.tensor(s,dtype=torch.float).to(assign_device(p,self.device))
-            output=self.nn.nn(s)
-            if self.IRL!=True:
-                output=output.detach().numpy()
+    def forward(self,s,i):
+        if self.MARL!=True:
+            if hasattr(self.nn,'nn'):
+                output=self.nn.nn(s)
             else:
-                output=output[1].detach().numpy()
+                output=self.nn.actor(s)
+        else:
+            if hasattr(self.nn,'nn'):
+                output=self.nn.nn(s,i)
+            else:
+                output=self.nn.actor(s,i)
+        return output
+    
+    
+    def select_action(self,s,p,i=None):
+        s=torch.tensor(s,dtype=torch.float).to(assign_device(p,self.device))
+        output=self.forward(s,i)
+        if hasattr(self.nn,'nn'):
+            if self.IRL!=True:
+                output=output.numpy()
+            else:
+                output=output[1].numpy()
             output=np.squeeze(output, axis=0)
             if isinstance(self.policy, rl.SoftmaxPolicy):
                 a=self.policy.select_action(len(output), output)
@@ -206,13 +221,26 @@ class kernel:
             elif isinstance(self.policy, rl.BoltzmannGumbelQPolicy):
                 a=self.policy.select_action(output, np.sum(self.step_counter))
         else:
-            s=np.expand_dims(s,axis=0)
-            s=torch.tensor(s,dtype=torch.float).to(assign_device(p,self.device))
-            output=self.nn.actor(s)
             if self.IRL!=True:
-                a=(output+self.noise.sample()).detach().numpy()
+                a=(output+self.noise.sample()).numpy()
             else:
-                a=(output[1]+self.noise.sample()).detach().numpy()
+                a=(output[1]+self.noise.sample()).numpy()
+        if self.IRL!=True:
+            return a
+        else:
+            return [output[0],a]
+    
+    
+    def store(self,s,p,lock,pool_lock):
+        s=np.expand_dims(s,axis=0)
+        if self.MARL!=True:
+            a=self.select_action(s,p)
+        else:
+            a=[]
+            for i in len(s[0]):
+                s=np.expand_dims(s[0][i],axis=0)
+                a.append([self.select_action(s,p,i)])
+            a=np.array(a)
         next_s,r,done=self.nn.env(a,p)
         if self.HER!=True or self.PR!=True:
             if type(self.state_pool[p])!=np.ndarray and self.state_pool[p]==None:
@@ -225,8 +253,6 @@ class kernel:
         next_s=np.array(next_s)
         r=np.array(r)
         done=np.array(done)
-        if self.IRL==True:
-            a=[output[0],a]
         self.pool(s,a,next_s,r,done,pool_lock,index)
         return next_s,r,done
     
