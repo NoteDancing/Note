@@ -62,7 +62,7 @@ class kernel:
         return
     
     
-    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,PR=None,IRL=None):
+    def set(self,policy=None,noise=None,pool_size=None,batch=None,update_steps=None,trial_count=None,criterion=None,PPO=None,HER=None,MARL=None,PR=None,IRL=None):
         if policy!=None:
             self.policy=policy
         if noise!=None:
@@ -82,6 +82,8 @@ class kernel:
             self.PPO=PPO
         if self.HER!=None:
             self.HER=HER
+        if self.MARL!=None:
+            self.MARL=MARL
         if self.PR!=None:
             self.PR=PR
             self.nn.pr.pool_network=False
@@ -189,29 +191,26 @@ class kernel:
     
     
     @tf.function(jit_compile=True)
-    def forward(self,s):
-        if hasattr(self.nn,'nn'):
-            output=self.nn.nn.fp(s)
+    def forward(self,s,i=None):
+        if self.MARL!=True:
+            if hasattr(self.nn,'nn'):
+                output=self.nn.nn.fp(s)
+            else:
+                output=self.nn.actor.fp(s)
         else:
-            output=self.nn.actor.fp(s)
+            if hasattr(self.nn,'nn'):
+                output=self.nn.nn.fp(s,i)
+            else:
+                output=self.nn.actor.fp(s,i)
         return output
     
     
-    def select_action(self,s):
+    def select_action_(self,output):
         if hasattr(self.nn,'nn'):
-            if hasattr(self.platform,'DType'):
-                output=self.forward(s)
-                if self.IRL!=True:
-                    output=output.numpy()
-                else:
-                    output=output[1].numpy()
+            if self.IRL!=True:
+                output=output.numpy()
             else:
-                s=self.platform.tensor(s,dtype=self.platform.float).to(self.nn.device)
-                output=self.nn.nn(s)
-                if self.IRL!=True:
-                    output=output.detach().numpy()
-                else:
-                    output=output[1].detach().numpy()
+                output=output[1].numpy()
             output=np.squeeze(output, axis=0)
             if isinstance(self.policy, rl.SoftmaxPolicy):
                 a=self.policy.select_action(len(output), output)
@@ -229,14 +228,11 @@ class kernel:
                 a=self.policy.select_action(output, self.step_counter)
         else:
             if hasattr(self.platform,'DType'):
-                output=self.forward(s)
                 if self.IRL!=True:
                     a=(output+self.noise.sample()).numpy()
                 else:
                     a=(output[1]+self.noise.sample()).numpy()
             else:
-                s=self.platform.tensor(s,dtype=self.platform.float).to(self.nn.device)
-                output=self.nn.actor(s)
                 if self.IRL!=True:
                     a=(output+self.noise.sample()).detach().numpy()
                 else:
@@ -245,6 +241,58 @@ class kernel:
             return a
         else:
             return [output[0],a]
+    
+    
+    def select_action(self,s):
+        if hasattr(self.nn,'nn'):
+            if hasattr(self.platform,'DType'):
+                if self.MARL!=True:
+                    output=self.forward(s)
+                    a=self.select_action_(output)
+                else:
+                    a=[]
+                    for i in len(s[0]):
+                        s=np.expand_dims(s[0][i],axis=0)
+                        output=self.forward(s,i)
+                        a.append([self.select_action_(output)])
+                    a=np.array(a)
+            else:
+                s=self.platform.tensor(s,dtype=self.platform.float).to(self.nn.device)
+                if self.MARL!=True:
+                    output=self.nn.nn(s)
+                    a=self.select_action_(output)
+                else:
+                    a=[]
+                    for i in len(s[0]):
+                        s=np.expand_dims(s[0][i],axis=0)
+                        output=self.nn.nn(s,i)
+                        a.append([self.select_action_(output)])
+                    a=np.array(a)
+        else:
+            if hasattr(self.platform,'DType'):
+                if self.MARL!=True:
+                    output=self.forward(s)
+                    a=self.select_action_(output)
+                else:
+                    a=[]
+                    for i in len(s[0]):
+                        s=np.expand_dims(s[0][i],axis=0)
+                        output=self.forward(s,i)
+                        a.append([self.select_action_(output)])
+                    a=np.array(a)
+            else:
+                s=self.platform.tensor(s,dtype=self.platform.float).to(self.nn.device)
+                if self.MARL!=True:
+                    output=self.nn.actor(s)
+                    a=self.select_action_(output)
+                else:
+                    a=[]
+                    for i in len(s[0]):
+                        s=np.expand_dims(s[0][i],axis=0)
+                        output=self.nn.actor(s,i)
+                        a.append([self.select_action_(output)])
+                    a=np.array(a)
+        return a
     
     
     def data_func(self):
@@ -644,6 +692,7 @@ class kernel:
             pickle.dump(self.criterion,output_file)
             pickle.dump(self.PPO,output_file)
             pickle.dump(self.HER,output_file)
+            pickle.dump(self.MARL,output_file)
             pickle.dump(self.PR,output_file)
             pickle.dump(self.IRL,output_file)
             pickle.dump(self.reward_list,output_file)
@@ -675,6 +724,7 @@ class kernel:
         pickle.dump(self.criterion,output_file)
         pickle.dump(self.PPO,output_file)
         pickle.dump(self.HER,output_file)
+        pickle.dump(self.MARL,output_file)
         pickle.dump(self.PR,output_file)
         pickle.dump(self.IRL,output_file)
         pickle.dump(self.reward_list,output_file)
@@ -701,6 +751,7 @@ class kernel:
         self.criterion=pickle.load(input_file)
         self.PPO=pickle.load(input_file)
         self.HER=pickle.load(input_file)
+        self.MARL=pickle.load(input_file)
         self.PR=pickle.load(input_file)
         self.IRL=pickle.load(input_file)
         self.reward_list=pickle.load(input_file)
