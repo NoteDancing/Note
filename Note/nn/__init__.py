@@ -67,6 +67,7 @@ from Note.nn.layer.halo_attn import HaloAttn
 from Note.nn.layer.identity import identity
 from Note.nn.layer.kernel_attention import kernel_attention
 from Note.nn.layer.layer_norm import layer_norm
+from Note.nn.layer.layer_scale import *
 from Note.nn.layer.Linformer_self_attention import Linformer_self_attention
 from Note.nn.layer.llama import LlamaAttention,LlamaEncoderLayer
 from Note.nn.layer.LoRALinear import LoRALinear
