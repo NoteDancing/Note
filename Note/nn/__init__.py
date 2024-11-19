@@ -56,9 +56,11 @@ from Note.nn.layer.GCN import GCN
 from Note.nn.layer.global_avg_pool1d import global_avg_pool1d
 from Note.nn.layer.global_avg_pool2d import global_avg_pool2d
 from Note.nn.layer.global_avg_pool3d import global_avg_pool3d
+from Note.nn.layer.global_context import GlobalContext
 from Note.nn.layer.global_max_pool1d import global_max_pool1d
 from Note.nn.layer.global_max_pool2d import global_max_pool2d
 from Note.nn.layer.global_max_pool3d import global_max_pool3d
+from Note.nn.layer.grn import GlobalResponseNorm
 from Note.nn.layer.group_norm import group_norm
 from Note.nn.layer.grouped_query_attention import grouped_query_attention
 from Note.nn.layer.GRU import GRU
@@ -66,6 +68,7 @@ from Note.nn.layer.GRUCell import GRUCell
 from Note.nn.layer.halo_attn import HaloAttn
 from Note.nn.layer.identity import identity
 from Note.nn.layer.kernel_attention import kernel_attention
+from Note.nn.layer.lambda_layer import LambdaLayer
 from Note.nn.layer.layer_norm import layer_norm
 from Note.nn.layer.layer_scale import *
 from Note.nn.layer.Linformer_self_attention import Linformer_self_attention
