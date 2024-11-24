@@ -26,6 +26,7 @@ from Note.nn.layer.blur_pool import *
 from Note.nn.layer.bottleneck_attn import BottleneckAttn
 from Note.nn.layer.cached_attention import cached_attention
 from Note.nn.layer.capsule import capsule
+from Note.nn.layer.cbam import *
 from Note.nn.layer.classifier import *
 from Note.nn.layer.concat import concat
 from Note.nn.layer.conv1d import conv1d
@@ -98,6 +99,7 @@ from Note.nn.layer.norm import norm
 from Note.nn.layer.patch_dropout import PatchDropout
 from Note.nn.layer.perdimscale_attention import perdimscale_attention
 from Note.nn.layer.permute import permute
+from Note.nn.layer.pos_embed import *
 from Note.nn.layer.pos_embed_sincos import *
 from Note.nn.layer.position_embedding import position_embedding
 from Note.nn.layer.PReLU import PReLU
