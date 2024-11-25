@@ -61,8 +61,8 @@ def resample_abs_pos_embed_nhwc(
 
     orig_dtype = posemb.dtype
     posemb = tf.cast(posemb, 'float32')
-    posemb = tf.transpose(tf.reshape(posemb, (1, posemb.shape[-3], posemb.shape[-2], posemb.shape[-1])), (0, 3, 1, 2))
+    posemb = tf.reshape(posemb, (1, posemb.shape[-3], posemb.shape[-2], posemb.shape[-1]))
     posemb = nn.interpolate(posemb, size=new_size, mode=interpolation, antialias=antialias)
-    posemb = tf.cast(tf.transpose(posemb, (0, 2, 3, 1)), orig_dtype)
+    posemb = tf.cast(posemb, orig_dtype)
 
     return posemb
