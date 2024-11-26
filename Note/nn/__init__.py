@@ -123,6 +123,7 @@ from Note.nn.layer.spatial_dropout1d import spatial_dropout1d
 from Note.nn.layer.spatial_dropout2d import spatial_dropout2d
 from Note.nn.layer.spatial_dropout3d import spatial_dropout3d
 from Note.nn.layer.spectral_norm import spectral_norm
+from Note.nn.layer.split_attn import SplitAttn
 from Note.nn.layer.squeeze_excite import *
 from Note.nn.layer.stochastic_depth import stochastic_depth
 from Note.nn.layer.subtract import subtract
