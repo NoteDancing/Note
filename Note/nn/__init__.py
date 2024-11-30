@@ -51,6 +51,7 @@ from Note.nn.layer.feed_forward_experts import feed_forward_experts
 from Note.nn.layer.filter_response_norm import filter_response_norm
 from Note.nn.layer.flatten import flatten
 from Note.nn.layer.format import *
+from Note.nn.layer.gather_excite import GatherExcite
 from Note.nn.layer.gaussian_dropout import gaussian_dropout
 from Note.nn.layer.gaussian_noise import gaussian_noise
 from Note.nn.layer.GCN import GCN
@@ -68,6 +69,7 @@ from Note.nn.layer.GRU import GRU
 from Note.nn.layer.GRUCell import GRUCell
 from Note.nn.layer.halo_attn import HaloAttn
 from Note.nn.layer.identity import identity
+from Note.nn.layer.interpolate import RegularGridInterpolator
 from Note.nn.layer.kernel_attention import kernel_attention
 from Note.nn.layer.lambda_layer import LambdaLayer
 from Note.nn.layer.layer_norm import layer_norm
