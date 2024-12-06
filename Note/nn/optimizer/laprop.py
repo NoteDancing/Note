@@ -37,6 +37,7 @@ class LaProp(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
+        self.steps_before_using_centered = 10
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -135,7 +136,8 @@ class LaProp(optimizer.Optimizer):
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,
                 "amsgrad": self.amsgrad,
-                "centered": self.centered
+                "centered": self.centered,
+                "steps_before_using_centered": self.steps_before_using_centered
             }
         )
         return config
