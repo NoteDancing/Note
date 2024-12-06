@@ -37,12 +37,12 @@ class LaProp(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.steps_before_using_centered = 10
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
         self.amsgrad = amsgrad
         self.centered = centered
+        self.steps_before_using_centered = 10
         self.step = []
 
     def build(self, var_list):
