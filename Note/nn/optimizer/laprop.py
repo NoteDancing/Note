@@ -125,8 +125,6 @@ class LaProp(optimizer.Optimizer):
         exp_avg.assign(exp_avg * beta1 + (1 - beta1) * lr * step_of_this_grad)
         
         variable.assign_add(-step_size * exp_avg)
-        if self.weight_decay != 0:
-            variable.assign_add(-self.weight_decay * variable)
 
     def get_config(self):
         config = super().get_config()
