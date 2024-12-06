@@ -139,8 +139,3 @@ class LaProp(optimizer.Optimizer):
             }
         )
         return config
-
-
-LaProp.__doc__ = LaProp.__doc__.replace(
-    "{{base_optimizer_keyword_args}}", optimizer.base_optimizer_keyword_args
-)
