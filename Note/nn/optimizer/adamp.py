@@ -1,3 +1,13 @@
+"""
+AdamP Optimizer Implementation copied from https://github.com/clovaai/AdamP/blob/master/adamp/adamp.py
+
+Paper: `Slowing Down the Weight Norm Increase in Momentum-based Optimizers` - https://arxiv.org/abs/2006.08217
+Code: https://github.com/clovaai/AdamP
+
+Copyright (c) 2024-present NoteDance.
+Apache-2.0 license
+"""
+
 import tensorflow as tf
 from Note import nn
 from keras.src.optimizers import optimizer
