@@ -11,7 +11,7 @@ class LaProp(optimizer.Optimizer):
         epsilon=1e-15,
         amsgrad=False,
         centered=False,
-        weight_decay=0,
+        weight_decay=None,
         clipnorm=None,
         clipvalue=None,
         global_clipnorm=None,
@@ -135,7 +135,7 @@ class LaProp(optimizer.Optimizer):
                 "epsilon": self.epsilon,
                 "amsgrad": self.amsgrad,
                 "centered": self.centered,
-                "steps_before_using_centered": self.steps_before_using_centered
+                "steps_before_using_centered": self.steps_before_using_centered,
             }
         )
         return config

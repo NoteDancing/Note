@@ -20,7 +20,7 @@ class MADGRAD(optimizer.Optimizer):
         learning_rate=1e-2,
         epsilon=1e-6,
         momentum: float = 0.9,
-        weight_decay=0,
+        weight_decay=None,
         decoupled_decay: bool = False,
         clipnorm=None,
         clipvalue=None,
@@ -70,12 +70,12 @@ class MADGRAD(optimizer.Optimizer):
         for var in var_list:
             self._grad_sum_sq.append(
                 self.add_variable_from_reference(
-                    reference_variable=var, name="exp_avg"
+                    reference_variable=var, name="grad_sum_s"
                 )
             )
             self._s.append(
                 self.add_variable_from_reference(
-                    reference_variable=var, name="exp_avg_sq"
+                    reference_variable=var, name="s"
                 )
             )
             if self.momentum != 0:

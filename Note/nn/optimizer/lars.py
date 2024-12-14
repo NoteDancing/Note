@@ -21,7 +21,7 @@ class Lars(optimizer.Optimizer):
         momentum=0,
         dampening=0,
         epsilon=1e-8,
-        weight_decay=0,
+        weight_decay=None,
         nesterov=False,
         trust_coeff=0.001,
         trust_clip=False,
@@ -111,7 +111,7 @@ class Lars(optimizer.Optimizer):
                 "nesterov": self.nesterov,
                 "trust_coeff": self.trust_coeff,
                 "trust_clip": self.trust_clip,
-                "always_adapt": self.always_adapt
+                "always_adapt": self.always_adapt,
             }
         )
         return config

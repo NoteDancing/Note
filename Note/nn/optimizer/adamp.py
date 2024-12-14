@@ -47,7 +47,7 @@ class AdamP(optimizer.Optimizer):
         beta_1=0.9,
         beta_2=0.999,
         epsilon=1e-8,
-        weight_decay=0,
+        weight_decay=None,
         delta=0.1,
         wd_ratio=0.1,
         nesterov=False,
@@ -142,7 +142,7 @@ class AdamP(optimizer.Optimizer):
                 "epsilon": self.epsilon,
                 "delta": self.delta,
                 "wd_ratio": self.wd_ratio,
-                "nesterov": self.nesterov
+                "nesterov": self.nesterov,
             }
         )
         return config
