@@ -192,7 +192,7 @@ class Mars(optimizer.Optimizer):
             caution=self.caution,
         )
         
-        self._last_grad[self._get_variable_index(variable)].assign(gradient)
+        self._last_grad[self._get_variable_index(variable)] = gradient
 
     def get_config(self):
         config = super().get_config()
