@@ -50,7 +50,6 @@ class MADGRAD(optimizer.Optimizer):
         self.momentum = momentum
         self.epsilon = epsilon
         self.decoupled_decay = decoupled_decay
-        self.step = []
     
     @property
     def supports_memory_efficient_fp16(self) -> bool:
@@ -67,6 +66,7 @@ class MADGRAD(optimizer.Optimizer):
         self._grad_sum_sq = []
         self._s = []
         self._x0 = []
+        self.step = []
         for var in var_list:
             self._grad_sum_sq.append(
                 self.add_variable_from_reference(

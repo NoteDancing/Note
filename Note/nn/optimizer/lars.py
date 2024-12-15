@@ -58,7 +58,6 @@ class Lars(optimizer.Optimizer):
         self.trust_coeff = trust_coeff
         self.trust_clip = trust_clip
         self.always_adapt = always_adapt
-        self.step = []
 
     def build(self, var_list):
         if self.built:

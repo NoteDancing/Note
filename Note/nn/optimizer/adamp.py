@@ -82,7 +82,6 @@ class AdamP(optimizer.Optimizer):
         self.delta = delta
         self.wd_ratio = wd_ratio
         self.nesterov = nesterov
-        self.step = []
 
     def build(self, var_list):
         if self.built:
@@ -90,6 +89,7 @@ class AdamP(optimizer.Optimizer):
         super().build(var_list)
         self._exp_avg = []
         self._exp_avg_sq = []
+        self.step = []
         for var in var_list:
             self._exp_avg.append(
                 self.add_variable_from_reference(

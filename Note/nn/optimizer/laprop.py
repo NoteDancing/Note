@@ -43,7 +43,6 @@ class LaProp(optimizer.Optimizer):
         self.amsgrad = amsgrad
         self.centered = centered
         self.steps_before_using_centered = 10
-        self.step = []
 
     def build(self, var_list):
         if self.built:
@@ -57,6 +56,7 @@ class LaProp(optimizer.Optimizer):
             self._exp_mean_avg_beta2 = []
         if self.amsgrad:
             self._max_exp_avg_sq = []
+        self.step = []
         for var in var_list:
             self._exp_avg.append(
                 self.add_variable_from_reference(
