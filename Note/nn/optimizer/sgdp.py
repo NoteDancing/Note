@@ -47,7 +47,7 @@ class SGDP(optimizer.Optimizer):
         momentum=0,
         dampening=0,
         epsilon=1e-8,
-        weight_decay=None,
+        weight_decay=0,
         delta=0.1,
         wd_ratio=0.1,
         nesterov=False,
@@ -65,7 +65,7 @@ class SGDP(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -76,6 +76,7 @@ class SGDP(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
+        self.weight_decay = weight_decay
         self.momentum = momentum
         self.dampening = dampening
         self.epsilon = epsilon
@@ -110,10 +111,10 @@ class SGDP(optimizer.Optimizer):
         wd_ratio = 1.
         if len(variable.shape) > 1:
             d_p, wd_ratio = projection(variable, gradient, d_p, self.delta, self.wd_ratio, self.epsilon)
-        
+
         # Weight decay
         if self.weight_decay != 0:
-            variable.assign(variable * (1. - lr * wd_ratio / (1-self.momentum)))
+            variable.assign(variable * (1. - lr * self.weight_decay * wd_ratio / (1-self.momentum)))
 
         # Step
         variable.assign_add(-lr * d_p)
@@ -122,6 +123,7 @@ class SGDP(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
+                "weight_decay": self.weight_decay,
                 "momentum": self.momentum,
                 "dampening": self.dampening,
                 "epsilon": self.epsilon,

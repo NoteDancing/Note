@@ -9,6 +9,7 @@ def _mars_single_tensor_step(
         exp_avg,
         exp_avg_sq,
         lr,
+        weight_decay,
         beta1,
         beta2,
         last_grad,
@@ -47,9 +48,9 @@ def _mars_single_tensor_step(
             bias_correction1 = 1.0 - beta1 ** step
             bias_correction2 = 1.0 - beta2 ** step
             denom = (tf.sqrt(exp_avg_sq) / math.sqrt(bias_correction2)) + eps
-            update = p + (exp_avg / bias_correction1) / denom
+            update = p * weight_decay + (exp_avg / bias_correction1) / denom
         elif mars_type == "lion":
-            update = p + tf.sign(exp_avg)
+            update = p * weight_decay + tf.sign(exp_avg)
         else:
             raise ValueError("Invalid mars_type")
 
@@ -69,7 +70,7 @@ def _mars_single_tensor_step(
             mask /= tf.clip_by_value(tf.reduce_mean(mask), 1e-3, float('inf'))
             exp_avg *= mask
 
-        update = p + (exp_avg / bias_correction1) / denom
+        update = p * weight_decay + (exp_avg / bias_correction1) / denom
         p.assign_add(-(lr * lr_1d_factor) * update)
 
     return exp_avg, exp_avg_sq
@@ -88,7 +89,7 @@ class Mars(optimizer.Optimizer):
         beta_1=0.9,
         beta_2=0.99,
         epsilon=1e-8,
-        weight_decay=None,
+        weight_decay=0,
         gamma=0.025,
         mars_type="adamw",
         optimize_1d=False,
@@ -109,7 +110,7 @@ class Mars(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -120,6 +121,7 @@ class Mars(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
+        self.weight_decay = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -178,6 +180,7 @@ class Mars(optimizer.Optimizer):
             exp_avg,
             exp_avg_sq,
             lr,
+            self.weight_decay,
             beta1,
             beta2,
             last_grad,
@@ -198,6 +201,7 @@ class Mars(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
+                "weight_decay": self.weight_decay,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,

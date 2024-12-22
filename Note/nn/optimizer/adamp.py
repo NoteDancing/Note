@@ -47,7 +47,7 @@ class AdamP(optimizer.Optimizer):
         beta_1=0.9,
         beta_2=0.999,
         epsilon=1e-8,
-        weight_decay=None,
+        weight_decay=0,
         delta=0.1,
         wd_ratio=0.1,
         nesterov=False,
@@ -65,7 +65,7 @@ class AdamP(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -76,6 +76,7 @@ class AdamP(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
+        self.weight_decay = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -128,7 +129,9 @@ class AdamP(optimizer.Optimizer):
         if len(variable.shape) > 1:
             perturb, wd_ratio = projection(variable, gradient, perturb, self.delta, self.wd_ratio, self.epsilon)
         
-        variable.assign(variable * (1. - lr * wd_ratio))
+        # Weight decay
+        if self.weight_decay > 0:
+            variable.assign(variable * (1. - lr * self.weight_decay * wd_ratio))
         
         # Step
         variable.assign(variable + (perturb * -step_size))
@@ -137,6 +140,7 @@ class AdamP(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
+                "weight_decay": self.weight_decay,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,

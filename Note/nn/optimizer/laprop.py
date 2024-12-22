@@ -11,7 +11,7 @@ class LaProp(optimizer.Optimizer):
         epsilon=1e-15,
         amsgrad=False,
         centered=False,
-        weight_decay=None,
+        weight_decay=0,
         clipnorm=None,
         clipvalue=None,
         global_clipnorm=None,
@@ -26,7 +26,7 @@ class LaProp(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -37,6 +37,7 @@ class LaProp(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
+        self.weight_decay = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -125,11 +126,15 @@ class LaProp(optimizer.Optimizer):
         exp_avg.assign(exp_avg * beta1 + (1 - beta1) * lr * step_of_this_grad)
         
         variable.assign_add(-step_size * exp_avg)
+        
+        if self.weight_decay != 0:
+            variable.assign_add(variable * -lr * self.weight_decay)
 
     def get_config(self):
         config = super().get_config()
         config.update(
             {
+                "weight_decay": self.weight_decay,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,

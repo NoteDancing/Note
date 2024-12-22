@@ -18,7 +18,7 @@ class NvNovoGrad(optimizer.Optimizer):
         beta_1=0.95,
         beta_2=0.98,
         epsilon=1e-8,
-        weight_decay=None,
+        weight_decay=0,
         grad_averaging=False,
         amsgrad=False,
         clipnorm=None,
@@ -35,7 +35,7 @@ class NvNovoGrad(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -46,6 +46,7 @@ class NvNovoGrad(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
+        self.weight_decay = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -109,6 +110,8 @@ class NvNovoGrad(optimizer.Optimizer):
             denom = tf.sqrt(exp_avg_sq) + self.epsilon
     
         gradient.assign(gradient / denom)
+        if self.weight_decay != 0:
+            gradient.assign_add(self.weight_decay * variable)
         if self.grad_averaging:
             gradient.assign(gradient * (1 - beta1))
         exp_avg.assign(beta1 * exp_avg + gradient)
@@ -119,6 +122,7 @@ class NvNovoGrad(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
+                "weight_decay": self.weight_decay,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,

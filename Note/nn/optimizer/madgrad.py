@@ -20,7 +20,7 @@ class MADGRAD(optimizer.Optimizer):
         learning_rate=1e-2,
         epsilon=1e-6,
         momentum: float = 0.9,
-        weight_decay=None,
+        weight_decay=0,
         decoupled_decay: bool = False,
         clipnorm=None,
         clipvalue=None,
@@ -36,7 +36,7 @@ class MADGRAD(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -47,6 +47,7 @@ class MADGRAD(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
+        self.weight_decay = weight_decay
         self.momentum = momentum
         self.epsilon = epsilon
         self.decoupled_decay = decoupled_decay
@@ -90,8 +91,12 @@ class MADGRAD(optimizer.Optimizer):
         grad_sum_sq, s = self._grad_sum_sq[self._get_variable_index(variable)], self._s[self._get_variable_index(variable)]
         lamb = lr * math.sqrt(self.step[self._get_variable_index(variable)])
 
-        if self.decoupled_decay:
-            variable.assign(variable * 1.0 - lr)
+        # Apply weight decay
+        if self.weight_decay != 0:
+            if self.decoupled_decay:
+                variable.assign(variable * 1.0 - lr * self.weight_decay)
+            else:
+                gradient.assign_add(self.weight_decay * variable)
 
         if isinstance(gradient, tf.SparseTensor):
             grad_val = gradient.values
@@ -147,6 +152,7 @@ class MADGRAD(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
+                "weight_decay": self.weight_decay,
                 "momentum": self.momentum,
                 "epsilon": self.epsilon,
                 "decoupled_decay": self.decoupled_decay,
