@@ -110,8 +110,10 @@ class SGDP(optimizer.Optimizer):
         wd_ratio = 1.
         if len(variable.shape) > 1:
             d_p, wd_ratio = projection(variable, gradient, d_p, self.delta, self.wd_ratio, self.epsilon)
-
-        variable.assign(variable * (1. - lr * wd_ratio / (1-self.momentum)))
+        
+        # Weight decay
+        if self.weight_decay != 0:
+            variable.assign(variable * (1. - lr * wd_ratio / (1-self.momentum)))
 
         # Step
         variable.assign_add(-lr * d_p)
