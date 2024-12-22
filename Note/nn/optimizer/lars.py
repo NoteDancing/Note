@@ -1,4 +1,4 @@
-""" PyTorch LARS / LARC Optimizer
+""" Note LARS / LARC Optimizer
 
 An implementation of LARS (SGD) + LARC in PyTorch
 

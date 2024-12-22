@@ -1,4 +1,4 @@
-""" PyTorch MADGRAD optimizer
+""" Note MADGRAD optimizer
 
 MADGRAD: https://arxiv.org/abs/2101.11075
 
