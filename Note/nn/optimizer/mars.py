@@ -161,7 +161,7 @@ class Mars(optimizer.Optimizer):
         self.caution = False
 
     def update_step(self, gradient, variable, learning_rate):
-        lr = tf.cast(learning_rate, variable.dtype) + self.epsilon
+        lr = tf.cast(learning_rate, variable.dtype)
         
         self.step[self._get_variable_index(variable)] += 1
         step = self.step[self._get_variable_index(variable)]

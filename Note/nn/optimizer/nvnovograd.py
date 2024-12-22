@@ -85,7 +85,7 @@ class NvNovoGrad(optimizer.Optimizer):
         self.amsgrad = False
 
     def update_step(self, gradient, variable, learning_rate):
-        lr = tf.cast(learning_rate, variable.dtype) + self.epsilon
+        lr = tf.cast(learning_rate, variable.dtype)
         
         exp_avg = self._exp_avg[self._get_variable_index(variable)]
         exp_avg_sq = self._exp_avg_sq[self._get_variable_index(variable)]

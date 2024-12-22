@@ -79,7 +79,7 @@ class NAdam(optimizer.Optimizer):
             self.step.append(0)
 
     def update_step(self, gradient, variable, learning_rate):
-        lr = tf.cast(learning_rate, variable.dtype) + self.epsilon
+        lr = tf.cast(learning_rate, variable.dtype)
         
         # Warming momentum schedule
         m_schedule = self._m_schedule[self._get_variable_index(variable)]

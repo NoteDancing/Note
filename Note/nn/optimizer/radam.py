@@ -70,7 +70,7 @@ class RAdam(optimizer.Optimizer):
 
     def update_step(self, gradient, variable, learning_rate):
         variable_fp32 = tf.cast(variable, 'float32')
-        lr = tf.cast(learning_rate, variable.dtype) + self.epsilon
+        lr = tf.cast(learning_rate, variable.dtype)
         
         exp_avg = self._exp_avg[self._get_variable_index(variable)]
         exp_avg_sq = self.exp_avg_sq[self._get_variable_index(variable)]
