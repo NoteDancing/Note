@@ -58,6 +58,25 @@ class AdaBelief(optimizer.Optimizer):
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.amsgrad = False
+    
+    def reset(self):
+        for i,v in enumerate(self._trainable_variables):
+            # State initialization
+            self.step[i] = 0
+            # Exponential moving average of gradient values
+            self._exp_avg[i] = self.add_variable_from_reference(
+                reference_variable=v, name="exp_avg"
+            )
+
+            # Exponential moving average of squared gradient values
+            self._exp_avg_var[i] = self.add_variable_from_reference(
+                reference_variable=v, name="exp_avg_var"
+            )
+            if self.amsgrad:
+                # Maintains max of all exp. moving avg. of sq. grad. values
+                self._max_exp_avg_var[i] = self.add_variable_from_reference(
+                    reference_variable=v, name="max_exp_avg_var"
+                )
 
     def build(self, var_list):
         if self.built:
