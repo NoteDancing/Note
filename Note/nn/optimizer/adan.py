@@ -114,15 +114,15 @@ class Adan(optimizer.Optimizer):
         self._exp_avg = []
         self._exp_avg_sq = []
         self._exp_avg_diff = []
-        self.params_with_grad = []
-        self.grads = []
-        self.exp_avgs = []
-        self.exp_avg_sqs = []
-        self.exp_avg_diffs = []
-        self.neg_pre_grads = []
-        self.neg_pre_grad = []
+        self.params_with_grad = dict()
+        self.grads = dict()
+        self.exp_avgs = dict()
+        self.exp_avg_sqs = dict()
+        self.exp_avg_diffs = dict()
+        self.neg_pre_grads = dict()
+        self.neg_pre_grad = dict()
         self.step = []
-        for var in var_list:
+        for i,var in enumerate(var_list):
             self._exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg"
@@ -138,14 +138,25 @@ class Adan(optimizer.Optimizer):
                     reference_variable=var, name="exp_avg_diff"
                 )
             )
-            self.params_with_grad.append(0)
-            self.grads.append(0)
-            self.exp_avgs.append(0)
-            self.exp_avg_sqs.append(0)
-            self.exp_avg_diffs.append(0)
-            self.neg_pre_grads.append(0)
-            self.neg_pre_grad.append(0)
+            if var.trainable==True:
+                self.params_with_grad[i]=0
+                self.grads[i]=0
+                self.exp_avgs[i]=0
+                self.exp_avg_sqs[i]=0
+                self.exp_avg_diffs[i]=0
+                self.neg_pre_grads[i]=0
+                self.neg_pre_grad[i]=0
             self.step.append(0)
+    
+    def _backend_update_step(self, grads, trainable_variables, learning_rate):
+        """Collective update_step that can be overridden by the backend.
+
+        It is overridden by torch for performance reasons, and
+        by TF to support tf.distribute.
+        """
+        self._grads = grads
+        for grad, var in zip(grads, trainable_variables):
+            self.update_step(grad, var, learning_rate)
 
     def update_step(self, gradient, variable, learning_rate):
         lr = tf.cast(learning_rate, variable.dtype)
@@ -155,17 +166,19 @@ class Adan(optimizer.Optimizer):
         bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
         bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
         bias_correction3 = 1 - self.beta3 ** self.step[self._get_variable_index(variable)]
-
-        self.params_with_grad[self._get_variable_index(variable)] = variable
-        self.grads[self._get_variable_index(variable)] = gradient
         
-        if self.step[self._get_variable_index(variable)] == 1:
-            self.neg_pre_grad[self._get_variable_index(variable)] = -tf.identity(gradient)
-        
-        self.exp_avgs[self._get_variable_index(variable)] = self._exp_avg[self._get_variable_index(variable)]
-        self.exp_avg_sqs[self._get_variable_index(variable)] = self._exp_avg_sq[self._get_variable_index(variable)]
-        self.exp_avg_diffs[self._get_variable_index(variable)] = self._exp_avg_diff[self._get_variable_index(variable)]
-        self.neg_pre_grads[self._get_variable_index(variable)] = self._neg_pre_grad[self._get_variable_index(variable)]
+        for i in range(len(self._trainable_variables)):
+            if self._trainable_variables[i].trainable==True:
+                self.params_with_grad[i] = self._trainable_variables[i]
+                self.grads[i] = self._grads[i]
+                
+                if self.step[i] == 1:
+                    self.neg_pre_grad[i] = -tf.identity(self._grads[i])
+                
+                self.exp_avgs[i] = self._exp_avg[i]
+                self.exp_avg_sqs[i] = self._exp_avg_sq[i]
+                self.exp_avg_diffs[i] = self._exp_avg_diff[i]
+                self.neg_pre_grads[i] = self._neg_pre_grad[i]
         
         kwargs = dict(
             params=self.params_with_grad,
