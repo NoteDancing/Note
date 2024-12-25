@@ -121,7 +121,7 @@ class Adan(optimizer.Optimizer):
         self.exp_avg_diffs = dict()
         self.neg_pre_grads = dict()
         self.neg_pre_grad = dict()
-        self.step = []
+        self.step = 0
         for i,var in enumerate(var_list):
             self._exp_avg.append(
                 self.add_variable_from_reference(
@@ -146,7 +146,6 @@ class Adan(optimizer.Optimizer):
                 self.exp_avg_diffs[i]=0
                 self.neg_pre_grads[i]=0
                 self.neg_pre_grad[i]=0
-            self.step.append(0)
     
     def _backend_update_step(self, grads, trainable_variables, learning_rate):
         """Collective update_step that can be overridden by the backend.
@@ -161,7 +160,7 @@ class Adan(optimizer.Optimizer):
     def update_step(self, gradient, variable, learning_rate):
         lr = tf.cast(learning_rate, variable.dtype)
 
-        self.step[self._get_variable_index(variable)] += 1
+        self.step += 1
         
         bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
         bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
@@ -172,7 +171,7 @@ class Adan(optimizer.Optimizer):
                 self.params_with_grad[i] = self._trainable_variables[i]
                 self.grads[i] = self._grads[i]
                 
-                if self.step[i] == 1:
+                if self.step == 1:
                     self.neg_pre_grad[i] = -tf.identity(self._grads[i])
                 
                 self.exp_avgs[i] = self._exp_avg[i]
