@@ -138,6 +138,12 @@ class Adan(optimizer.Optimizer):
                     reference_variable=var, name="exp_avg_diff"
                 )
             )
+            self.params_with_grad.append(0)
+            self.grads.append(0)
+            self.exp_avgs.append(0)
+            self.exp_avg_sqs.append(0)
+            self.exp_avg_diffs.append(0)
+            self.neg_pre_grads.append(0)
             self.neg_pre_grad.append(0)
             self.step.append(0)
 
@@ -150,16 +156,16 @@ class Adan(optimizer.Optimizer):
         bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
         bias_correction3 = 1 - self.beta3 ** self.step[self._get_variable_index(variable)]
 
-        self.params_with_grad.append(variable)
-        self.grads.append(gradient)
+        self.params_with_grad[self._get_variable_index(variable)] = variable
+        self.grads[self._get_variable_index(variable)] = gradient
         
         if self.step[self._get_variable_index(variable)] == 1:
             self.neg_pre_grad[self._get_variable_index(variable)] = -tf.identity(gradient)
         
-        self.exp_avgs.append(self._exp_avg[self._get_variable_index(variable)])
-        self.exp_avg_sqs.append(self._exp_avg_sq[self._get_variable_index(variable)])
-        self.exp_avg_diffs.append(self._exp_avg_diff[self._get_variable_index(variable)])
-        self.neg_pre_grads.append(self._neg_pre_grad[self._get_variable_index(variable)])
+        self.exp_avgs[self._get_variable_index(variable)] = self._exp_avg[self._get_variable_index(variable)]
+        self.exp_avg_sqs[self._get_variable_index(variable)] = self._exp_avg_sq[self._get_variable_index(variable)]
+        self.exp_avg_diffs[self._get_variable_index(variable)] = self._exp_avg_diff[self._get_variable_index(variable)]
+        self.neg_pre_grads[self._get_variable_index(variable)] = self._neg_pre_grad[self._get_variable_index(variable)]
         
         kwargs = dict(
             params=self.params_with_grad,
