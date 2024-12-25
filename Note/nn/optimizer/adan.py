@@ -153,26 +153,22 @@ class Adan(optimizer.Optimizer):
         It is overridden by torch for performance reasons, and
         by TF to support tf.distribute.
         """
-        self._grads = grads
-        for grad, var in zip(grads, trainable_variables):
-            self.update_step(grad, var, learning_rate)
+        self.update_step(grads, trainable_variables, learning_rate)
 
-    def update_step(self, gradient, variable, learning_rate):
-        lr = tf.cast(learning_rate, variable.dtype)
-
+    def update_step(self, grads, trainable_variables, learning_rate):
         self.step += 1
         
-        bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
-        bias_correction3 = 1 - self.beta3 ** self.step[self._get_variable_index(variable)]
+        bias_correction1 = 1 - self.beta1 ** self.step
+        bias_correction2 = 1 - self.beta2 ** self.step
+        bias_correction3 = 1 - self.beta3 ** self.step
         
-        for i in range(len(self._trainable_variables)):
-            if self._trainable_variables[i].trainable==True:
-                self.params_with_grad[i] = self._trainable_variables[i]
-                self.grads[i] = self._grads[i]
+        for i in range(len(trainable_variables)):
+            if trainable_variables[i].trainable==True:
+                self.params_with_grad[i] = trainable_variables[i]
+                self.grads[i] = grads[i]
                 
                 if self.step == 1:
-                    self.neg_pre_grad[i] = -tf.identity(self._grads[i])
+                    self.neg_pre_grad[i] = -tf.identity(grads[i])
                 
                 self.exp_avgs[i] = self._exp_avg[i]
                 self.exp_avg_sqs[i] = self._exp_avg_sq[i]
@@ -192,14 +188,14 @@ class Adan(optimizer.Optimizer):
             bias_correction1=bias_correction1,
             bias_correction2=bias_correction2,
             bias_correction3_sqrt=math.sqrt(bias_correction3),
-            lr=lr,
+            lr=learning_rate,
             weight_decay=self.weight_decay,
             eps=self.epsilon,
             no_prox=self.no_prox,
         )
 
         if self.foreach:
-            _multi_tensor_adan(**kwargs)
+            self._multi_tensor_adan(**kwargs)
         else:
             _single_tensor_adan(**kwargs)
 
