@@ -114,13 +114,6 @@ class Adan(optimizer.Optimizer):
         self._exp_avg = []
         self._exp_avg_sq = []
         self._exp_avg_diff = []
-        self.params_with_grad = dict()
-        self.grads = dict()
-        self.exp_avgs = dict()
-        self.exp_avg_sqs = dict()
-        self.exp_avg_diffs = dict()
-        self.neg_pre_grads = dict()
-        self.neg_pre_grad = dict()
         self.step = 0
         for i,var in enumerate(var_list):
             self._exp_avg.append(
@@ -138,14 +131,6 @@ class Adan(optimizer.Optimizer):
                     reference_variable=var, name="exp_avg_diff"
                 )
             )
-            if var.trainable==True:
-                self.params_with_grad[i]=0
-                self.grads[i]=0
-                self.exp_avgs[i]=0
-                self.exp_avg_sqs[i]=0
-                self.exp_avg_diffs[i]=0
-                self.neg_pre_grads[i]=0
-                self.neg_pre_grad[i]=0
     
     def _backend_update_step(self, grads, trainable_variables, learning_rate):
         """Collective update_step that can be overridden by the backend.
@@ -156,6 +141,14 @@ class Adan(optimizer.Optimizer):
         self.update_step(grads, trainable_variables, learning_rate)
 
     def update_step(self, grads, trainable_variables, learning_rate):
+        params_with_grad = []
+        grads = []
+        exp_avgs = []
+        exp_avg_sqs = []
+        exp_avg_diffs = []
+        neg_pre_grads = []
+        neg_pre_grad = []
+        
         self.step += 1
         
         bias_correction1 = 1 - self.beta1 ** self.step
@@ -163,25 +156,24 @@ class Adan(optimizer.Optimizer):
         bias_correction3 = 1 - self.beta3 ** self.step
         
         for i in range(len(trainable_variables)):
-            if trainable_variables[i].trainable==True:
-                self.params_with_grad[i] = trainable_variables[i]
-                self.grads[i] = grads[i]
-                
-                if self.step == 1:
-                    self.neg_pre_grad[i] = -tf.identity(grads[i])
-                
-                self.exp_avgs[i] = self._exp_avg[i]
-                self.exp_avg_sqs[i] = self._exp_avg_sq[i]
-                self.exp_avg_diffs[i] = self._exp_avg_diff[i]
-                self.neg_pre_grads[i] = self._neg_pre_grad[i]
+            params_with_grad.append(trainable_variables[i])
+            grads.append(grads[i])
+            
+            if self.step == 1:
+                neg_pre_grad = -tf.identity(grads[i])
+            
+            exp_avgs.append(self._exp_avg[self._get_variable_index(trainable_variables[i])])
+            exp_avg_sqs.append(self._exp_avg_sq[self._get_variable_index(trainable_variables[i])])
+            exp_avg_diffs.append(self._exp_avg_diff[self._get_variable_index(trainable_variables[i])])
+            neg_pre_grads.append(neg_pre_grad)
         
         kwargs = dict(
-            params=self.params_with_grad,
-            grads=self.grads,
-            exp_avgs=self.exp_avgs,
-            exp_avg_sqs=self.exp_avg_sqs,
-            exp_avg_diffs=self.exp_avg_diffs,
-            neg_pre_grads=self.neg_pre_grads,
+            params=params_with_grad,
+            grads=grads,
+            exp_avgs=exp_avgs,
+            exp_avg_sqs=exp_avg_sqs,
+            exp_avg_diffs=exp_avg_diffs,
+            neg_pre_grads=neg_pre_grads,
             beta1=self.beta1,
             beta2=self.beta2,
             beta3=self.beta3,
