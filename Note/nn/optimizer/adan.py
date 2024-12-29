@@ -115,7 +115,7 @@ class Adan(optimizer.Optimizer):
         self._exp_avg_sq = []
         self._exp_avg_diff = []
         self.step = 0
-        for i,var in enumerate(var_list):
+        for var in var_list:
             self._exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg"
