@@ -89,21 +89,22 @@ class Adan(optimizer.Optimizer):
         self.no_prox = False
     
     def restart_opt(self):
-        for i,v in enumerate(self._trainable_variables):
+        self.step = 0
+        for v in enumerate(self._trainable_variables):
             # State initialization
-            self.step[i] = 0
+            
             # Exponential moving average of gradient values
-            self._exp_avg[i] = self.add_variable_from_reference(
+            self._exp_avg[self._get_variable_index(v)] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg"
             )
 
             # Exponential moving average of squared gradient values
-            self._exp_avg_sq[i] = self.add_variable_from_reference(
+            self._exp_avg_sq[self._get_variable_index(v)] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg_sq"
             )
             
             # Exponential moving average of gradient difference
-            self._exp_avg_diff[i] = self.add_variable_from_reference(
+            self._exp_avg_diff[self._get_variable_index(v)] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg_diff"
             )
 
