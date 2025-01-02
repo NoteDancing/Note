@@ -10,7 +10,7 @@ Modified to be compatible with TensorFlow and Keras from original at: https://gi
  title = {ADOPT: Modified Adam Can Converge with Any β2 with the Optimal Rate},
  year = {2024}
 }
-Copyright 2024 NoteDance
+Copyright 2025 NoteDance
 """
 import tensorflow as tf
 from keras.src.optimizers import optimizer

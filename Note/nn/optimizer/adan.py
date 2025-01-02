@@ -211,7 +211,7 @@ class Adan(optimizer.Optimizer):
 def _single_tensor_adan(
     params, grads, exp_avgs, exp_avg_sqs, exp_avg_diffs, neg_pre_grads,
     beta1, beta2, beta3, bias_correction1, bias_correction2,
-    bias_correction3_sqrt, lr, weight_decay, eps, no_prox
+    bias_correction3_sqrt, lr, weight_decay, eps, no_prox, caution,
 ):
     for i, param in enumerate(params):
         grad = grads[i]
@@ -232,6 +232,12 @@ def _single_tensor_adan(
         denom = tf.sqrt(exp_avg_sq / bias_correction3_sqrt) + eps
         step_size_diff = lr * beta2 / bias_correction2
         step_size = lr / bias_correction1
+        
+        if caution:
+            # Apply caution as per 'Cautious Optimizers' - https://arxiv.org/abs/2411.16085
+            mask = tf.cast(exp_avg * grad > 0, grad.dtype)
+            mask /= tf.maximum((tf.reduce_mean(mask), 1e-3))
+            exp_avg = exp_avg * mask
 
         if no_prox:
             param.assign(param * (1 - lr * weight_decay))
@@ -248,7 +254,7 @@ def _single_tensor_adan(
 def _multi_tensor_adan(
     params, grads, exp_avgs, exp_avg_sqs, exp_avg_diffs, neg_pre_grads,
     beta1, beta2, beta3, bias_correction1, bias_correction2,
-    bias_correction3_sqrt, lr, weight_decay, eps, no_prox
+    bias_correction3_sqrt, lr, weight_decay, eps, no_prox, caution,
 ):
     if len(params) == 0:
         return
@@ -271,6 +277,15 @@ def _multi_tensor_adan(
     denom = [tf.sqrt(exp_avg_sq / bias_correction3_sqrt) + eps for exp_avg_sq in exp_avg_sqs]
     step_size_diff = lr * beta2 / bias_correction2
     step_size = lr / bias_correction1
+    
+    if caution:
+        # Apply caution as per 'Cautious Optimizers' - https://arxiv.org/abs/2411.16085
+        masks = [exp_avg * grad for exp_avg, grad in zip(exp_avgs, grads)]
+        masks = [tf.cast(m > 0, dtype=g.dtype) for m, g in zip(masks, grads)]
+        mask_scale = [tf.reduce_mean(m) for m in masks]
+        mask_scale = [tf.maximum(m, 1e-3) for m in mask_scale]
+        masks = [m / scale for m, scale in zip(masks, mask_scale)]
+        exp_avgs = [exp_avg * m for exp_avg, m in zip(exp_avgs, masks)]
 
     if no_prox:
         params = [
