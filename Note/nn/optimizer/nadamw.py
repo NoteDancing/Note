@@ -71,8 +71,8 @@ class NAdamW(optimizer.Optimizer):
     def __setstate__(self, state):
         self.__dict__.update(state)
         if not tf.is_tensor(self.step[0]):
-            for i in range(len(self._trainable_variables)):
-                self.step[i] = tf.convert_to_tensor(float(self.step[i]))
+            for p in self._trainable_variables:
+                self.step[self._get_variable_index(p)] = tf.convert_to_tensor(float(self.step[self._get_variable_index(p)]))
         self.caution = False
 
     def build(self, var_list):
