@@ -1,4 +1,4 @@
-""" Adafactor (Big Vision variant) for PyTorch
+""" Adafactor (Big Vision variant)
 
 Adapted from the implementation in big vision: https://github.com/google-research/big_vision
 
