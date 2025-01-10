@@ -59,7 +59,7 @@ class NAdamW(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay = weight_decay
+        self.weight_decay_ = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -127,7 +127,7 @@ class NAdamW(optimizer.Optimizer):
             beta1=self.beta1,
             beta2=self.beta2,
             lr=lr,
-            weight_decay=self.weight_decay,
+            weight_decay=self.weight_decay_,
             eps=self.epsilon,
             caution=self.caution,
             maximize=self.maximize,
@@ -138,7 +138,7 @@ class NAdamW(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay,
+                "weight_decay": self.weight_decay_,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,

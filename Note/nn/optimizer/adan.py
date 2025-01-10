@@ -76,7 +76,7 @@ class Adan(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay = weight_decay
+        self.weight_decay_ = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.beta_3 = beta_2
@@ -182,7 +182,7 @@ class Adan(optimizer.Optimizer):
             bias_correction2=bias_correction2,
             bias_correction3_sqrt=math.sqrt(bias_correction3),
             lr=learning_rate,
-            weight_decay=self.weight_decay,
+            weight_decay=self.weight_decay_,
             eps=self.epsilon,
             no_prox=self.no_prox,
         )
@@ -196,7 +196,7 @@ class Adan(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay,
+                "weight_decay": self.weight_decay_,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "beta_3": self.beta_3,

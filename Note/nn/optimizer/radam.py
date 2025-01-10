@@ -42,7 +42,7 @@ class RAdam(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay = weight_decay
+        self.weight_decay_ = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -102,8 +102,8 @@ class RAdam(optimizer.Optimizer):
                 step_size = lr / (1 - beta1 ** self.step[self._get_variable_index(variable)])
             buffered[2] = step_size
         
-        if self.weight_decay != 0:
-            variable_fp32.assign_add(-self.weight_decay * lr * variable_fp32)
+        if self.weight_decay_ != 0:
+            variable_fp32.assign_add(-self.weight_decay_ * lr * variable_fp32)
         
         # more conservative since it's an approximated value
         if num_sma >= 5:
@@ -118,7 +118,7 @@ class RAdam(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay,
+                "weight_decay": self.weight_decay_,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,

@@ -37,7 +37,7 @@ class LaProp(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay = weight_decay
+        self.weight_decay_ = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -127,14 +127,14 @@ class LaProp(optimizer.Optimizer):
         
         variable.assign_add(-step_size * exp_avg)
         
-        if self.weight_decay != 0:
-            variable.assign_add(variable * -lr * self.weight_decay)
+        if self.weight_decay_ != 0:
+            variable.assign_add(variable * -lr * self.weight_decay_)
 
     def get_config(self):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay,
+                "weight_decay": self.weight_decay_,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,

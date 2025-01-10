@@ -121,7 +121,7 @@ class Mars(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay = weight_decay
+        self.weight_decay_ = weight_decay
         self.beta_1 = beta_1
         self.beta_2 = beta_2
         self.epsilon = epsilon
@@ -180,7 +180,7 @@ class Mars(optimizer.Optimizer):
             exp_avg,
             exp_avg_sq,
             lr,
-            self.weight_decay,
+            self.weight_decay_,
             beta1,
             beta2,
             last_grad,
@@ -201,7 +201,7 @@ class Mars(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay,
+                "weight_decay": self.weight_decay_,
                 "beta_1": self.beta_1,
                 "beta_2": self.beta_2,
                 "epsilon": self.epsilon,
