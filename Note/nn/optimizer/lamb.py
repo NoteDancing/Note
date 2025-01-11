@@ -119,7 +119,7 @@ class Lamb(optimizer.Optimizer):
 
         norms = []
         for grad in self.grads:
-            if tf.sparse.is_sparse(grad):
+            if tf.keras.backend.is_sparse(grad):
                 raise RuntimeError("Lamb does not support sparse gradients, consider SparseAdam instead.")
             norms.append(tf.norm(grad))
 
