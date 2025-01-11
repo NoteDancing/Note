@@ -96,34 +96,38 @@ class MADGRAD(optimizer.Optimizer):
             if self.decoupled_decay:
                 variable.assign(variable * 1.0 - lr * self.weight_decay_)
             else:
+                if isinstance(gradient, tf.SparseTensor):
+                    raise RuntimeError("weight_decay option is not compatible with sparse gradients")
                 gradient.assign_add(self.weight_decay_ * variable)
 
         if isinstance(gradient, tf.SparseTensor):
-            grad_val = gradient.values
-
-            p_masked = tf.gather_nd(variable, gradient.indices)
-            grad_sum_sq_masked = tf.gather_nd(grad_sum_sq, gradient.indices)
-            s_masked = tf.gather_nd(s, gradient.indices)
-
-            # Compute x_0 from other known quantities
-            rms_masked_vals = tf.pow(grad_sum_sq_masked.values, 1 / 3) + self.epsilon
-            x0_masked_vals = p_masked.values + 1 * (s_masked.values / rms_masked_vals)
-
-            # Dense + sparse op
-            grad_sq = gradient * gradient
+            # Coalesce sparse gradient for efficient operations
+            grad = tf.sparse.reorder(gradient)
+            grad_val = grad.values
+        
+            # Create sparse masks for efficient indexing
+            p_masked = tf.sparse.SparseTensor(grad.indices, tf.zeros_like(grad_val), variable.shape)
+            grad_sum_sq_masked = tf.sparse.SparseTensor(grad.indices, tf.zeros_like(grad_val), grad_sum_sq.shape)
+            s_masked = tf.sparse.SparseTensor(grad.indices, tf.zeros_like(grad_val), s.shape)
+        
+            # Compute x0_masked_vals
+            rms_masked_vals = tf.math.pow(tf.gather_nd(grad_sum_sq_masked, grad.indices), 1/3) + self.epsilon
+            x0_masked_vals = tf.gather_nd(p_masked, grad.indices) + tf.divide(tf.gather_nd(s_masked, grad.indices), rms_masked_vals)
+        
+            # Update dense tensors
+            grad_sq = tf.sparse.to_dense(grad) * tf.sparse.to_dense(grad) 
             grad_sum_sq.assign_add(grad_sq * lamb)
-            grad_sum_sq_masked.assign_add(grad_sq * lamb)
-
-            rms_masked_vals = tf.pow(grad_sum_sq_masked.values, 1 / 3) + self.epsilon
-
-            s.assign_add(gradient * lamb)
-            s_masked.values.assign_add(grad_val * lamb)
-
-            # update masked copy of p
-            p_kp1_masked_vals = x0_masked_vals + -1 * (s_masked.values / rms_masked_vals)
-            # Copy updated masked p to dense p using an add operation
-            p_masked.values.assign_add(p_kp1_masked_vals * -1)
-            variable.assign_add(p_masked * -1)
+            grad_sum_sq_masked.assign_add(grad_sq * lamb) 
+        
+            rms_masked_vals = tf.math.pow(tf.gather_nd(grad_sum_sq_masked, grad.indices), 1/3) + self.epsilon
+        
+            s.assign_add(grad * lamb)
+            s_masked.assign_add(grad_val * lamb)
+        
+            # Update p_masked
+            p_kp1_masked_vals = x0_masked_vals - tf.divide(tf.gather_nd(s_masked, grad.indices), rms_masked_vals)
+            p_masked.assign_add(tf.SparseTensor(grad.indices, -p_kp1_masked_vals, variable.shape))
+            variable.assign_add(-p_masked)
         else:
             if self.momentum == 0:
                 # Compute x_0 from other known quantities
