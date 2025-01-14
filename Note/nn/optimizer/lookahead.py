@@ -10,7 +10,7 @@ from keras.src.optimizers import optimizer
 
 class Lookahead(optimizer.Optimizer):
     def __init__(self, base_optimizer, alpha=0.5, k=6, name="lookahead"):
-        super().__init__(learning_rate=None,name=name)
+        super().__init__(learning_rate=1.,name=name)
         if not 0.0 <= alpha <= 1.0:
             raise ValueError(f'Invalid slow update rate: {alpha}')
         if not 1 <= k:
