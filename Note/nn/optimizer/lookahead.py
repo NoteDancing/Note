@@ -39,6 +39,14 @@ class Lookahead(optimizer.Optimizer):
     def sync_lookahead(self):
         self.update_slow()
     
+    def _backend_update_step(self, grads, trainable_variables, learning_rate):
+        """Collective update_step that can be overridden by the backend.
+    
+        It is overridden by torch for performance reasons, and
+        by TF to support tf.distribute.
+        """
+        self.update_step(grads, trainable_variables, learning_rate)
+    
     def apply_gradients(self, grads_and_vars, tape=None):
         self.tape = tape
         grads, trainable_variables = zip(*grads_and_vars)
