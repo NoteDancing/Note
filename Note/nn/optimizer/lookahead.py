@@ -47,7 +47,7 @@ class Lookahead(optimizer.Optimizer):
         return self._iterations
 
     def update_step(self, grads, trainable_variables, learning_rate):
-        if self.tape is not None:
+        if self.tape is None:
             self._base_optimizer.apply_gradients(zip(grads, trainable_variables))
         else:
             self._base_optimizer.apply_gradients(zip(grads, trainable_variables), self.tape)
