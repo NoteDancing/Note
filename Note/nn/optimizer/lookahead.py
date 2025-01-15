@@ -28,8 +28,8 @@ class Lookahead(optimizer.Optimizer):
         for var in var_list:
             self._base_optimizer.lookahead_slow_buff.append(None)
     
-    def update_slow(self):
-        for fast_p in self._trainable_variables:
+    def update_slow(self, trainable_variables):
+        for fast_p in trainable_variables:
             self._base_optimizer.lookahead_slow_buff[self._get_variable_index(fast_p)] = tf.Variable(tf.zeros_like(fast_p), trainable=False)
             self._base_optimizer.lookahead_slow_buff[self._get_variable_index(fast_p)].assign(fast_p)
             slow = self._base_optimizer.lookahead_slow_buff
@@ -61,7 +61,7 @@ class Lookahead(optimizer.Optimizer):
             self._base_optimizer.apply_gradients(zip(grads, trainable_variables), self.tape)
         self.lookahead_step += 1
         if self.lookahead_step % self.lookahead_k == 0:
-            self.update_slow()
+            self.update_slow(trainable_variables)
 
     def state_dict(self):
         return tf.keras.optimizers.serialize(self._base_optimizer)
