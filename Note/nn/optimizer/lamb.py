@@ -131,16 +131,16 @@ class Lamb(optimizer.Optimizer):
         if self.built:
             return
         super().build(var_list)
-        self._exp_avg = []
-        self._exp_avg_sq = []
+        self.exp_avg = []
+        self.exp_avg_sq = []
         self.step = 0
         for var in var_list:
-            self._exp_avg.append(
+            self.exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg"
                 )
             )
-            self._exp_avg_sq.append(
+            self.exp_avg_sq.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg_sq"
                 )
@@ -180,8 +180,8 @@ class Lamb(optimizer.Optimizer):
             if clip_grad_norm is not None:
                 grad.assign(grad / clip_grad_norm)
             
-            exp_avg = self._exp_avg[self._get_variable_index(p)]
-            exp_avg_sq = self._exp_avg_sq[self._get_variable_index(p)]
+            exp_avg = self.exp_avg[self._get_variable_index(p)]
+            exp_avg_sq = self.exp_avg_sq[self._get_variable_index(p)]
     
             # Decay the first and second moment running average coefficient
             exp_avg.assign(beta1 * exp_avg + beta3 * grad)  # m_t

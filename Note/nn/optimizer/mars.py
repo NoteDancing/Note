@@ -136,22 +136,22 @@ class Mars(optimizer.Optimizer):
         if self.built:
             return
         super().build(var_list)
-        self._exp_avg = []
-        self._last_grad = []
-        self._exp_avg_sq = []
+        self.exp_avg = []
+        self.last_grad = []
+        self.exp_avg_sq = []
         self.step = []
         for var in var_list:
-            self._exp_avg.append(
+            self.exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg"
                 )
             )
-            self._last_grad.append(
+            self.last_grad.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="last_grad"
                 )
             )
-            self._exp_avg_sq.append(
+            self.exp_avg_sq.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg_sq"
                 )
@@ -167,9 +167,9 @@ class Mars(optimizer.Optimizer):
         
         self.step[self._get_variable_index(variable)] += 1
         step = self.step[self._get_variable_index(variable)]
-        exp_avg = self._exp_avg[self._get_variable_index(variable)]
-        exp_avg_sq = self._exp_avg_sq[self._get_variable_index(variable)]
-        last_grad = self._last_grad[self._get_variable_index(variable)]
+        exp_avg = self.exp_avg[self._get_variable_index(variable)]
+        exp_avg_sq = self.exp_avg_sq[self._get_variable_index(variable)]
+        last_grad = self.last_grad[self._get_variable_index(variable)]
         beta1, beta2 = self.beta1, self.beta2
         is_grad_2d = gradient.shape.ndims >= 2
 
@@ -195,7 +195,7 @@ class Mars(optimizer.Optimizer):
             caution=self.caution,
         )
         
-        self._last_grad[self._get_variable_index(variable)] = gradient
+        self.last_grad[self._get_variable_index(variable)] = gradient
 
     def get_config(self):
         config = super().get_config()

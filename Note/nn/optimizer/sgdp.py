@@ -88,9 +88,9 @@ class SGDP(optimizer.Optimizer):
         if self.built:
             return
         super().build(var_list)
-        self._momentum = []
+        self.momentum = []
         for var in var_list:
-            self._momentum.append(
+            self.momentum.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="momentum"
                 )
@@ -100,7 +100,7 @@ class SGDP(optimizer.Optimizer):
         lr = tf.cast(learning_rate, variable.dtype)
         
         # SGD
-        buf = self._momentum[self._get_variable_index(variable)]
+        buf = self.momentum[self._get_variable_index(variable)]
         buf.assign(buf * self.momentum + (1. - self.dampening) * gradient)
         if self.nesterov:
             d_p = gradient + self.momentum * buf

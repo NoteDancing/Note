@@ -90,21 +90,21 @@ class Adan(optimizer.Optimizer):
     
     def restart_opt(self):
         self.step = 0
-        for v in enumerate(self._trainable_variables):
+        for v in self._trainable_variables:
             # State initialization
             
             # Exponential moving average of gradient values
-            self._exp_avg[self._get_variable_index(v)] = self.add_variable_from_reference(
+            self.exp_avg[self._get_variable_index(v)] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg"
             )
 
             # Exponential moving average of squared gradient values
-            self._exp_avg_sq[self._get_variable_index(v)] = self.add_variable_from_reference(
+            self.exp_avg_sq[self._get_variable_index(v)] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg_sq"
             )
             
             # Exponential moving average of gradient difference
-            self._exp_avg_diff[self._get_variable_index(v)] = self.add_variable_from_reference(
+            self.exp_avg_diff[self._get_variable_index(v)] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg_diff"
             )
 
@@ -112,22 +112,22 @@ class Adan(optimizer.Optimizer):
         if self.built:
             return
         super().build(var_list)
-        self._exp_avg = []
-        self._exp_avg_sq = []
-        self._exp_avg_diff = []
+        self.exp_avg = []
+        self.exp_avg_sq = []
+        self.exp_avg_diff = []
         self.step = 0
         for var in var_list:
-            self._exp_avg.append(
+            self.exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg"
                 )
             )
-            self._exp_avg_sq.append(
+            self.exp_avg_sq.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg_sq"
                 )
             )
-            self._exp_avg_diff.append(
+            self.exp_avg_diff.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg_diff"
                 )
@@ -163,9 +163,9 @@ class Adan(optimizer.Optimizer):
             if self.step == 1:
                 neg_pre_grad = -tf.identity(grads[i])
             
-            exp_avgs.append(self._exp_avg[self._get_variable_index(trainable_variables[i])])
-            exp_avg_sqs.append(self._exp_avg_sq[self._get_variable_index(trainable_variables[i])])
-            exp_avg_diffs.append(self._exp_avg_diff[self._get_variable_index(trainable_variables[i])])
+            exp_avgs.append(self.exp_avg[self._get_variable_index(trainable_variables[i])])
+            exp_avg_sqs.append(self.exp_avg_sq[self._get_variable_index(trainable_variables[i])])
+            exp_avg_diffs.append(self.exp_avg_diff[self._get_variable_index(trainable_variables[i])])
             neg_pre_grads.append(neg_pre_grad)
         
         kwargs = dict(

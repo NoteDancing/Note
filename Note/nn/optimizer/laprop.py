@@ -49,36 +49,36 @@ class LaProp(optimizer.Optimizer):
         if self.built:
             return
         super().build(var_list)
-        self._exp_avg = []
-        self._exp_avg_lr_1 = []
-        self._exp_avg_lr_2 = []
-        self._exp_avg_sq = []
+        self.exp_avg = []
+        self.exp_avg_lr_1 = []
+        self.exp_avg_lr_2 = []
+        self.exp_avg_sq = []
         if self.centered:
-            self._exp_mean_avg_beta2 = []
+            self.exp_mean_avg_beta2 = []
         if self.amsgrad:
-            self._max_exp_avg_sq = []
+            self.max_exp_avg_sq = []
         self.step = []
         for var in var_list:
-            self._exp_avg.append(
+            self.exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg"
                 )
             )
-            self._exp_avg_lr_1.append(0.)
-            self._exp_avg_lr_2.append(0.)
-            self._exp_avg_sq.append(
+            self.exp_avg_lr_1.append(0.)
+            self.exp_avg_lr_2.append(0.)
+            self.exp_avg_sq.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg_sq"
                 )
             )
             if self.centered:
-                self._exp_mean_avg_beta2.append(
+                self.exp_mean_avg_beta2.append(
                     self.add_variable_from_reference(
                         reference_variable=var, name="exp_mean_avg_beta2"
                     )
                 )
             if self.amsgrad:
-                self._max_exp_avg_sq.append(
+                self.max_exp_avg_sq.append(
                     self.add_variable_from_reference(
                         reference_variable=var, name="max_exp_avg_sq"
                     )
@@ -87,11 +87,11 @@ class LaProp(optimizer.Optimizer):
 
     def update_step(self, gradient, variable, learning_rate):
         lr = tf.cast(learning_rate, variable.dtype)
-        exp_avg, exp_avg_sq = self._exp_avg[self._get_variable_index(variable)], self.exp_avg_sq[self._get_variable_index(variable)]
+        exp_avg, exp_avg_sq = self.exp_avg[self._get_variable_index(variable)], self.exp_avg_sq[self._get_variable_index(variable)]
         if self.centered:
-            exp_mean_avg_beta2 = self._exp_mean_avg_beta2[self._get_variable_index(variable)]
+            exp_mean_avg_beta2 = self.exp_mean_avg_beta2[self._get_variable_index(variable)]
         if self.amsgrad:
-            max_exp_avg_sq = self._max_exp_avg_sq[self._get_variable_index(variable)]
+            max_exp_avg_sq = self.max_exp_avg_sq[self._get_variable_index(variable)]
         beta1, beta2 = self.beta1, self.beta2
 
         self.step[self._get_variable_index(variable)] += 1
@@ -99,13 +99,13 @@ class LaProp(optimizer.Optimizer):
         # Decay the first and second moment running average coefficient
         exp_avg_sq.assign(exp_avg_sq * beta2 + (1 - beta2) * gradient * gradient)
 
-        self._exp_avg_lr_1[self._get_variable_index(variable)] = self._exp_avg_lr_1[self._get_variable_index(variable)] * beta1 + (1 - beta1) * lr
-        self._exp_avg_lr_2[self._get_variable_index(variable)] = self._exp_avg_lr_2[self._get_variable_index(variable)] * beta2 + (1 - beta2)
+        self.exp_avg_lr_1[self._get_variable_index(variable)] = self.exp_avg_lr_1[self._get_variable_index(variable)] * beta1 + (1 - beta1) * lr
+        self.exp_avg_lr_2[self._get_variable_index(variable)] = self.exp_avg_lr_2[self._get_variable_index(variable)] * beta2 + (1 - beta2)
 
-        bias_correction1 = self._exp_avg_lr_1[self._get_variable_index(variable)] / lr if lr.numpy()!=0. else tf.cast(1., variable.dtype) #1 - beta1 ** step
+        bias_correction1 = self.exp_avg_lr_1[self._get_variable_index(variable)] / lr if lr.numpy()!=0. else tf.cast(1., variable.dtype) #1 - beta1 ** step
         step_size = 1 / bias_correction1
 
-        bias_correction2 = self._exp_avg_lr_2[self._get_variable_index(variable)]
+        bias_correction2 = self.exp_avg_lr_2[self._get_variable_index(variable)]
         
         denom = exp_avg_sq
         if self.centered:

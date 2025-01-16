@@ -62,17 +62,17 @@ class Adahessian(optimizer.Optimizer):
         if self.built:
             return
         super().build(var_list)
-        self._exp_avg = []
-        self._exp_hessian_diag_sq = []
+        self.exp_avg = []
+        self.exp_hessian_diag_sq = []
         self.hessian_step = []
         self.step = []
         for var in var_list:
-            self._exp_avg.append(
+            self.exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_avg"
                 )
             )
-            self._exp_hessian_diag_sq.append(
+            self.exp_hessian_diag_sq.append(
                 self.add_variable_from_reference(
                     reference_variable=var, name="exp_hessian_diag_sq"
                 )
@@ -145,8 +145,8 @@ class Adahessian(optimizer.Optimizer):
             # Perform correct stepweight decay as in AdamW
             p.assign(p * (1 - lr * self.weight_decay_))
             
-            exp_avg = self._exp_avg[self._get_variable_index(p)]
-            exp_hessian_diag_sq = self._exp_hessian_diag_sq[self._get_variable_index(p)]
+            exp_avg = self.exp_avg[self._get_variable_index(p)]
+            exp_hessian_diag_sq = self.exp_hessian_diag_sq[self._get_variable_index(p)]
             self.step[self._get_variable_index(p)] += 1
             
             # Decay the first and second moment running average coefficient

@@ -64,17 +64,17 @@ class AdaBelief(optimizer.Optimizer):
             # State initialization
             self.step[i] = 0
             # Exponential moving average of gradient values
-            self._exp_avg[i] = self.add_variable_from_reference(
+            self.exp_avg[i] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg"
             )
 
             # Exponential moving average of squared gradient values
-            self._exp_avg_var[i] = self.add_variable_from_reference(
+            self.exp_avg_var[i] = self.add_variable_from_reference(
                 reference_variable=v, name="exp_avg_var"
             )
             if self.amsgrad:
                 # Maintains max of all exp. moving avg. of sq. grad. values
-                self._max_exp_avg_var[i] = self.add_variable_from_reference(
+                self.max_exp_avg_var[i] = self.add_variable_from_reference(
                     reference_variable=v, name="max_exp_avg_var"
                 )
 
@@ -82,27 +82,27 @@ class AdaBelief(optimizer.Optimizer):
         if self.built:
             return
         super().build(var_list)
-        self._exp_avg = []
-        self._exp_avg_var = []
+        self.exp_avg = []
+        self.exp_avg_var = []
         if self.amsgrad:
-            self._max_exp_avg_var = []
+            self.max_exp_avg_var = []
         self.buffer=[[None, None, None] for _ in range(10)]
         self.step = []
         for var in var_list:
             if var.dtype in {tf.float16, tf.bfloat16}:
                 var_fp32 = tf.cast(var, 'float32')
-            self._exp_avg.append(
+            self.exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var_fp32, name="exp_avg"
                 )
             )
-            self._exp_avg_var.append(
+            self.exp_avg_var.append(
                 self.add_variable_from_reference(
                     reference_variable=var_fp32, name="exp_avg_var"
                 )
             )
             if self.amsgrad:
-                self._max_exp_avg_var.append(
+                self.max_exp_avg_var.append(
                     self.add_variable_from_reference(
                         reference_variable=var_fp32, name="max_exp_avg_var"
                     )
@@ -127,8 +127,8 @@ class AdaBelief(optimizer.Optimizer):
                 gradient.assign_add(self.weight_decay_ * variable_fp32)
 
         # get current state variable
-        exp_avg = self._exp_avg[self._get_variable_index(variable)]
-        exp_avg_var = self._exp_avg_var[self._get_variable_index(variable)]
+        exp_avg = self.exp_avg[self._get_variable_index(variable)]
+        exp_avg_var = self.exp_avg_var[self._get_variable_index(variable)]
 
         self.step[self._get_variable_index(variable)] += 1
         bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
@@ -140,7 +140,7 @@ class AdaBelief(optimizer.Optimizer):
         exp_avg_var.assign(exp_avg_var * self.beta_2 + (1 - self.beta_2) * grad_residual * grad_residual)
 
         if self.amsgrad:
-            max_exp_avg_var = self._max_exp_avg_var[self._get_variable_index(variable)]
+            max_exp_avg_var = self.max_exp_avg_var[self._get_variable_index(variable)]
             # Maintains the maximum of all 2nd moment running avg. till now
             max_exp_avg_var.assign(tf.maximum(max_exp_avg_var, exp_avg_var + self.epsilon))
 
