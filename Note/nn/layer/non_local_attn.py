@@ -60,6 +60,10 @@ class NonLocalAttn:
     def init_weights(self, l):
         if isinstance(l, nn.conv2d):
             l.weight.assign(nn.kaiming_normal_(l.weight, mode='fan_out', nonlinearity='relu'))
+        elif isinstance(l, nn.batch_norm):
+            l.gamma.assign(nn.constant_(l.gamma, 0))
+        elif isinstance(l, nn.group_norm):
+            l.gamma.assign(nn.constant_(l.gamma, 0))
 
 
 class BilinearAttnTransform:
