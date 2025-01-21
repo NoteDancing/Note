@@ -494,3 +494,9 @@ def sparse_(
         for zero_idx in zero_indices:
             tensor[zero_idx, col_idx].assign(0)
     return tensor
+
+
+def constant_(tensor, val):
+    val = tf.cast(val, tensor.dtype)
+    tensor.assign(tf.fill(tensor.shape, val))
+    return tensor
