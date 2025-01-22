@@ -29,6 +29,7 @@ from Note.nn.layer.capsule import capsule
 from Note.nn.layer.cbam import *
 from Note.nn.layer.classifier import *
 from Note.nn.layer.concat import concat
+from Note.nn.layer.conv_bn_act import ConvNormAct
 from Note.nn.layer.conv1d import conv1d
 from Note.nn.layer.conv1d_transpose import conv1d_transpose
 from Note.nn.layer.conv2d import conv2d
