@@ -27,7 +27,7 @@ class BlurPool2d:
     Args:
         channels = Number of input channels
         filt_size (int): binomial filter size for blurring. currently supports 3 (default) and 5.
-        strides (int): downsampling filter stride
+        stride (int): downsampling filter stride
 
     Returns:
         torch.Tensor: the transformed tensor.
@@ -36,15 +36,15 @@ class BlurPool2d:
             self,
             channels: Optional[int] = None,
             filt_size: int = 3,
-            strides: int = 2,
+            stride: int = 2,
             pad_mode: str = 'REFLECT',
     ) -> None:
         assert filt_size > 1
         self.channels = channels
         self.filt_size = filt_size
-        self.strides = strides
+        self.stride = stride
         self.pad_mode = pad_mode
-        pad = get_padding(filt_size, strides, dilation=1)
+        pad = get_padding(filt_size, stride, dilation=1)
         self.padding = [[0, 0], [pad, pad], [pad, pad], [0, 0]]
 
         coeffs = tf.convert_to_tensor((np.poly1d((0.5, 0.5)) ** (self.filt_size - 1)).coeffs.astype(np.float32))
@@ -62,7 +62,7 @@ class BlurPool2d:
         else:
             channels = self.channels
             weight = self.filt
-        return nn.conv2d_func(x, weight, strides=self.strides, groups=channels)
+        return nn.conv2d_func(x, weight, strides=self.stride, groups=channels)
 
 
 def create_aa(
