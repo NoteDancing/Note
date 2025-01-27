@@ -186,7 +186,7 @@ def _single_tensor_sgdw(
             buf = momentum_buffer_list[i]
 
             if buf is None:
-                buf = tf.identity(grad)
+                buf = tf.Variable(grad)
                 momentum_buffer_list[i] = buf
             else:
                 buf.assign(buf * momentum + grad * (1 - dampening))
@@ -238,7 +238,7 @@ def _multi_tensor_sgdw(
         else:
             for i in range(len(momentum_buffer_list)):
                 if momentum_buffer_list[i] is None:
-                    buf = tf.identity(grads[i])
+                    buf = tf.Variable(grads[i])
                     momentum_buffer_list[i] = buf
                 else:
                     buf = momentum_buffer_list[i]

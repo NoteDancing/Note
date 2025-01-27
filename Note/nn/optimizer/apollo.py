@@ -129,7 +129,7 @@ class Apollo(optimizer.Optimizer):
             denom = tf.abs(B)
             denom = tf.clip_by_value(denom, clip_value_min=rebound, clip_value_max=denom.dtype.max)
 
-        d_p.assign(tf.identity(exp_avg_grad / denom))
+        d_p.assign(exp_avg_grad / denom)
 
         # Perform step weight decay
         if self.weight_decay_ != 0 and self.weight_decay_type != 'L2':

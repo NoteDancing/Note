@@ -161,7 +161,7 @@ class Adan(optimizer.Optimizer):
             grads.append(grads[i])
             
             if self.step == 1:
-                neg_pre_grad = -tf.identity(grads[i])
+                neg_pre_grad = tf.Variable(-grads[i])
             
             exp_avgs.append(self.exp_avg[self._get_variable_index(trainable_variables[i])])
             exp_avg_sqs.append(self.exp_avg_sq[self._get_variable_index(trainable_variables[i])])
