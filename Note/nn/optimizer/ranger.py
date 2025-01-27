@@ -98,8 +98,8 @@ class Ranger(optimizer.Optimizer):
         exp_avg_sq = self.exp_avg_sq[self._get_variable_index(variable)]
         
         # GC operation for Conv layers and FC layers
-        if tf.rank(gradient) > 1:
-            gradient = gradient - tf.reduce_mean(gradient, axis=tuple(range(1, tf.rank(gradient))), keepdims=True)
+        if len(gradient.shape) > self.gc_gradient_threshold:
+            gradient = gradient - tf.reduce_mean(gradient, axis=tuple(range(1, len(gradient.shape))), keepdims=True)
         
         self.step[self._get_variable_index(variable)] += 1
         
