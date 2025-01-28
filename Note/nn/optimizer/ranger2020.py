@@ -86,14 +86,15 @@ class Ranger(optimizer.Optimizer):
         self.slow_buffer = []
         self.step = []
         for var in var_list:
+            var_fp32 = tf.Variable(tf.cast(var, 'float32'))
             self.exp_avg.append(
                 self.add_variable_from_reference(
-                    reference_variable=tf.cast(var, 'float32'), name="exp_avg"
+                    reference_variable=var_fp32, name="exp_avg"
                 )
             )
             self.exp_avg_sq.append(
                 self.add_variable_from_reference(
-                    reference_variable=tf.cast(var, 'float32'), name="exp_avg_sq"
+                    reference_variable=var_fp32, name="exp_avg_sq"
                 )
             )
             self.slow_buffer.append(tf.Variable(var))
