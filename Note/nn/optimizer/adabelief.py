@@ -90,7 +90,7 @@ class AdaBelief(optimizer.Optimizer):
         self.step = []
         for var in var_list:
             if var.dtype in {tf.float16, tf.bfloat16}:
-                var_fp32 = tf.cast(var, 'float32')
+                var_fp32 = tf.Variable(tf.cast(var, 'float32'))
             self.exp_avg.append(
                 self.add_variable_from_reference(
                     reference_variable=var_fp32, name="exp_avg"
