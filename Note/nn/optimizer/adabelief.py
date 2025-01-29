@@ -89,6 +89,7 @@ class AdaBelief(optimizer.Optimizer):
         self.buffer=[[None, None, None] for _ in range(10)]
         self.step = []
         for var in var_list:
+            var_fp32 = var
             if var.dtype in {tf.float16, tf.bfloat16}:
                 var_fp32 = tf.Variable(tf.cast(var, 'float32'))
             self.exp_avg.append(
