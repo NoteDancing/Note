@@ -124,8 +124,8 @@ class NAdamW(optimizer.Optimizer):
             exp_avgs,
             exp_avg_sqs,
             state_steps,
-            beta1=self.beta1,
-            beta2=self.beta2,
+            beta_1=self.beta_1,
+            beta_2=self.beta_2,
             lr=lr,
             weight_decay=self.weight_decay_,
             eps=self.epsilon,
@@ -159,8 +159,8 @@ def nadamw(
         foreach = None,
         capturable = False,
         *,
-        beta1,
-        beta2,
+        beta_1,
+        beta_2,
         lr,
         weight_decay,
         eps,
@@ -190,8 +190,8 @@ def nadamw(
         exp_avgs,
         exp_avg_sqs,
         state_steps,
-        beta1=beta1,
-        beta2=beta2,
+        beta_1=beta_1,
+        beta_2=beta_2,
         lr=lr,
         weight_decay=weight_decay,
         eps=eps,
@@ -202,7 +202,7 @@ def nadamw(
 
 def _single_tensor_nadamw(
         params, grads, exp_avgs, exp_avg_sqs, state_steps, *,
-        beta1, beta2, lr, weight_decay,
+        beta_1, beta_2, lr, weight_decay,
         eps, caution, maximize, capturable):
     for i, param in enumerate(params):
         grad = grads[i] if not maximize else -grads[i]
@@ -217,16 +217,16 @@ def _single_tensor_nadamw(
         param.assign(param * (1. - lr * weight_decay))
 
         # Decay the first and second moment running average coefficient.
-        exp_avg.assign(beta1 * exp_avg + (1 - beta1) * grad)
-        exp_avg_sq.assign(beta2 * exp_avg_sq + (1 - beta2) * tf.square(grad))
+        exp_avg.assign(beta_1 * exp_avg + (1 - beta_1) * grad)
+        exp_avg_sq.assign(beta_2 * exp_avg_sq + (1 - beta_2) * tf.square(grad))
 
         if capturable:
             step = tf.cast(step_t, param.dtype)
             
-            # 1 - beta1 ** step can't be captured in a CUDA graph, even if step is a CUDA tensor
+            # 1 - beta_1 ** step can't be captured in a CUDA graph, even if step is a CUDA tensor
             # (incurs "RuntimeError: CUDA error: operation not permitted when stream is capturing")
-            bias_correction1 = 1 - tf.pow(beta1, step)
-            bias_correction2 = 1 - tf.pow(beta2, step)
+            bias_correction1 = 1 - tf.pow(beta_1, step)
+            bias_correction2 = 1 - tf.pow(beta_2, step)
 
             step_size = lr / bias_correction1
             step_size_neg = -step_size
@@ -235,7 +235,7 @@ def _single_tensor_nadamw(
             
             # Only difference between NAdamW and AdamW in this implementation.
             # The official PyTorch implementation of NAdam uses a different algorithm.
-            exp_avg.assign(beta1 * exp_avg + (1 - beta1) * grad)
+            exp_avg.assign(beta_1 * exp_avg + (1 - beta_1) * grad)
             
             denom = (tf.sqrt(exp_avg_sq) / (bias_correction2_sqrt * step_size_neg)) + (eps / step_size_neg)
 
@@ -249,14 +249,14 @@ def _single_tensor_nadamw(
             param.assign_add(exp_avg / denom)
         else:
             step = step_t
-            bias_correction1 = 1 - beta1 ** step
-            bias_correction2 = 1 - beta2 ** step
+            bias_correction1 = 1 - beta_1 ** step
+            bias_correction2 = 1 - beta_2 ** step
             step_size = lr / bias_correction1
             bias_correction2_sqrt = math.sqrt(bias_correction2)
             
             # Apply Nesterov. Only difference between NAdamW and AdamW in this implementation.
             # The official PyTorch implementation of NAdam uses a different algorithm.
-            exp_avg.assign(beta1 * exp_avg + (1 - beta1) * grad)
+            exp_avg.assign(beta_1 * exp_avg + (1 - beta_1) * grad)
             denom = (tf.sqrt(exp_avg_sq) / bias_correction2_sqrt) + eps
 
             if caution:
@@ -269,7 +269,7 @@ def _single_tensor_nadamw(
 
 def _multi_tensor_nadamw(
         params, grads, exp_avgs, exp_avg_sqs, state_steps,
-        beta1, beta2, lr, weight_decay, eps, caution, maximize, capturable
+        beta_1, beta_2, lr, weight_decay, eps, caution, maximize, capturable
 ):
     if maximize:
         grads = [-grad for grad in grads]  # type: ignore[assignment]
@@ -289,12 +289,12 @@ def _multi_tensor_nadamw(
 
     # Decay the first and second moment running average coefficient
     for i in range(len(exp_avgs)):
-        exp_avgs[i].assign(exp_avgs[i] * beta1 + grads[i] * (1 - beta1))
-        exp_avg_sqs[i].assign(exp_avg_sqs[i] * beta2 + tf.square(grads[i]) * (1 - beta2))
+        exp_avgs[i].assign(exp_avgs[i] * beta_1 + grads[i] * (1 - beta_1))
+        exp_avg_sqs[i].assign(exp_avg_sqs[i] * beta_2 + tf.square(grads[i]) * (1 - beta_2))
 
     if capturable:
-        bias_correction1 = [tf.pow(beta1, tf.cast(step, p.dtype)) for step, p in zip(state_steps, params)]
-        bias_correction2 = [tf.pow(beta2, tf.cast(step, p.dtype)) for step, p in zip(state_steps, params)]
+        bias_correction1 = [tf.pow(beta_1, tf.cast(step, p.dtype)) for step, p in zip(state_steps, params)]
+        bias_correction2 = [tf.pow(beta_2, tf.cast(step, p.dtype)) for step, p in zip(state_steps, params)]
 
         bias_correction1 = [1 - bc for bc in bias_correction1]
         bias_correction2 = [1 - bc for bc in bias_correction2]
@@ -305,7 +305,7 @@ def _multi_tensor_nadamw(
         # Only difference between NAdamW and AdamW in this implementation.
         # The official PyTorch implementation of NAdam uses a different algorithm.
         for i in range(len(exp_avgs)):
-            exp_avgs[i].assign(exp_avgs[i] * beta1 + grads[i] * (1 - beta1))
+            exp_avgs[i].assign(exp_avgs[i] * beta_1 + grads[i] * (1 - beta_1))
 
         denom = [
             tf.sqrt(exp_avg_sqs[i]) / (bias_correction2_sqrt[i] * step_size[i]) + eps / step_size[i]
@@ -323,8 +323,8 @@ def _multi_tensor_nadamw(
         for i in range(len(params)):
             params[i].assign_add(exp_avgs[i] / denom[i])
     else:
-        bias_correction1 = [1 - beta1 ** step for step in state_steps]
-        bias_correction2 = [1 - beta2 ** step for step in state_steps]
+        bias_correction1 = [1 - beta_1 ** step for step in state_steps]
+        bias_correction2 = [1 - beta_2 ** step for step in state_steps]
 
         step_size = [(lr / bc) * -1 for bc in bias_correction1]
         bias_correction2_sqrt = [math.sqrt(bc) for bc in bias_correction2]
@@ -332,7 +332,7 @@ def _multi_tensor_nadamw(
         # Apply Nesterov. Only difference between NAdamW and AdamW in this implementation.
         # The official PyTorch implementation of NAdam uses a different algorithm.
         for i in range(len(exp_avgs)):
-            exp_avgs[i].assign(exp_avgs[i] * beta1 + grads[i] * (1 - beta1))
+            exp_avgs[i].assign(exp_avgs[i] * beta_1 + grads[i] * (1 - beta_1))
 
         denom = [
             tf.sqrt(exp_avg_sqs[i]) / bias_correction2_sqrt[i] + eps

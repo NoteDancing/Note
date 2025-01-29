@@ -85,24 +85,24 @@ class NAdam(optimizer.Optimizer):
         m_schedule = self.m_schedule[self._get_variable_index(variable)]
         schedule_decay = self.schedule_decay
         exp_avg, exp_avg_sq = self.exp_avg[self._get_variable_index(variable)], self.exp_avg_sq[self._get_variable_index(variable)]
-        beta1, beta2 = self.beta1, self.beta2
+        beta_1, beta_2 = self.beta_1, self.beta_2
         eps = self.epsilon
         self.step[self._get_variable_index(variable)] += 1
         t= self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - beta2 ** t
+        bias_correction2 = 1 - beta_2 ** t
         
         if self.weight_decay_ != 0:
             gradient = gradient.assign_add(self.weight_decay_ * variable)
 
-        momentum_cache_t = beta1 * (1. - 0.5 * (0.96 ** (t * schedule_decay)))
-        momentum_cache_t_1 = beta1 * (1. - 0.5 * (0.96 ** ((t + 1) * schedule_decay)))
+        momentum_cache_t = beta_1 * (1. - 0.5 * (0.96 ** (t * schedule_decay)))
+        momentum_cache_t_1 = beta_1 * (1. - 0.5 * (0.96 ** ((t + 1) * schedule_decay)))
         m_schedule_new = m_schedule * momentum_cache_t
         m_schedule_next = m_schedule * momentum_cache_t * momentum_cache_t_1
         self.m_schedule[self._get_variable_index(variable)] = m_schedule_new
     
         # Decay the first and second moment running average coefficient
-        exp_avg.assign(beta1 * exp_avg + (1. - beta1) * gradient)
-        exp_avg_sq.assign(beta2 * exp_avg_sq + (1. - beta2) * tf.square(gradient))
+        exp_avg.assign(beta_1 * exp_avg + (1. - beta_1) * gradient)
+        exp_avg_sq.assign(beta_2 * exp_avg_sq + (1. - beta_2) * tf.square(gradient))
     
         denom = (tf.sqrt(exp_avg_sq) / math.sqrt(bias_correction2)) + eps
         variable.assign_add(-lr * (1. - momentum_cache_t) / (1. - m_schedule_new) * gradient / denom)

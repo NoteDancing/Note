@@ -161,18 +161,18 @@ class Lamb(optimizer.Optimizer):
         clip_grad_norm = self._get_clip_grad_norm() # None if disabled
         
         bias_correction = 1 if self.bias_correction else 0
-        beta1 = self.beta_1
-        beta2 = self.beta_2
+        beta_1 = self.beta_1
+        beta_2 = self.beta_2
         grad_averaging = 1 if self.grad_averaging else 0
-        beta3 = 1 - beta1 if grad_averaging else 1.0
+        beta3 = 1 - beta_1 if grad_averaging else 1.0
         
         # assume same step across group now to simplify things
         # per parameter step can be easily support by making it tensor, or pass list into kernel
         self.step += 1
         
         if bias_correction:
-            bias_correction1 = 1 - beta1 ** self.step
-            bias_correction2 = 1 - beta2 ** self.step
+            bias_correction1 = 1 - beta_1 ** self.step
+            bias_correction2 = 1 - beta_2 ** self.step
         else:
             bias_correction1, bias_correction2 = 1.0, 1.0
         
@@ -184,8 +184,8 @@ class Lamb(optimizer.Optimizer):
             exp_avg_sq = self.exp_avg_sq[self._get_variable_index(p)]
     
             # Decay the first and second moment running average coefficient
-            exp_avg.assign(beta1 * exp_avg + beta3 * grad)  # m_t
-            exp_avg_sq.assign(beta2 * exp_avg_sq + (1 - beta2) * tf.square(grad))  # v_t
+            exp_avg.assign(beta_1 * exp_avg + beta3 * grad)  # m_t
+            exp_avg_sq.assign(beta_2 * exp_avg_sq + (1 - beta_2) * tf.square(grad))  # v_t
     
             denom = (tf.sqrt(exp_avg_sq) / math.sqrt(bias_correction2)) + self.epsilon
             update = (exp_avg / bias_correction1) / denom

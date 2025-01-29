@@ -150,11 +150,11 @@ class Adahessian(optimizer.Optimizer):
             self.step[self._get_variable_index(p)] += 1
             
             # Decay the first and second moment running average coefficient
-            exp_avg.assign(self.beta1 * exp_avg + (1 - self.beta1) * grad)
-            exp_hessian_diag_sq.assign(self.beta2 * exp_hessian_diag_sq + (1 - self.beta2) * tf.square(p.hess))
+            exp_avg.assign(self.beta_1 * exp_avg + (1 - self.beta_1) * grad)
+            exp_hessian_diag_sq.assign(self.beta_2 * exp_hessian_diag_sq + (1 - self.beta_2) * tf.square(p.hess))
            
-            bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(p)]
-            bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(p)]
+            bias_correction1 = 1 - self.beta_1 ** self.step[self._get_variable_index(p)]
+            bias_correction2 = 1 - self.beta_2 ** self.step[self._get_variable_index(p)]
             
             k = self.hessian_power
             denom = tf.pow(exp_hessian_diag_sq / bias_correction2, k / 2) + self.epsilon

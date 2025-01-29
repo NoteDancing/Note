@@ -10,8 +10,8 @@ def _mars_single_tensor_step(
         exp_avg_sq,
         lr,
         weight_decay,
-        beta1,
-        beta2,
+        beta_1,
+        beta_2,
         last_grad,
         eps,
         step,
@@ -25,18 +25,18 @@ def _mars_single_tensor_step(
 ):
     # optimize_1d ==> use MARS for 1d param, else use AdamW
     if optimize_1d or is_grad_2d:
-        one_minus_beta1 = 1. - beta1
+        one_minus_beta1 = 1. - beta_1
         
         if step == 1:
             # this is a timm addition, making first step more consistent when no grad history, otherwise tests fail
             c_t = grad
         else:
-            c_t = gamma * (beta1 / one_minus_beta1) * (grad - last_grad) + grad
+            c_t = gamma * (beta_1 / one_minus_beta1) * (grad - last_grad) + grad
             c_t_norm = tf.norm(c_t)
             if c_t_norm > 1.0:
                 c_t = c_t / c_t_norm
 
-        exp_avg.assign(beta1 * exp_avg + one_minus_beta1 * c_t)
+        exp_avg.assign(beta_1 * exp_avg + one_minus_beta1 * c_t)
 
         if caution:
             mask = tf.cast(exp_avg * grad > 0, grad.dtype)
@@ -44,9 +44,9 @@ def _mars_single_tensor_step(
             exp_avg *= mask
 
         if mars_type == "adamw":
-            exp_avg_sq.assign(beta2 * exp_avg_sq + (1. - beta2) * tf.square(c_t))
-            bias_correction1 = 1.0 - beta1 ** step
-            bias_correction2 = 1.0 - beta2 ** step
+            exp_avg_sq.assign(beta_2 * exp_avg_sq + (1. - beta_2) * tf.square(c_t))
+            bias_correction1 = 1.0 - beta_1 ** step
+            bias_correction2 = 1.0 - beta_2 ** step
             denom = (tf.sqrt(exp_avg_sq) / math.sqrt(bias_correction2)) + eps
             update = p * weight_decay + (exp_avg / bias_correction1) / denom
         elif mars_type == "lion":
@@ -170,7 +170,7 @@ class Mars(optimizer.Optimizer):
         exp_avg = self.exp_avg[self._get_variable_index(variable)]
         exp_avg_sq = self.exp_avg_sq[self._get_variable_index(variable)]
         last_grad = self.last_grad[self._get_variable_index(variable)]
-        beta1, beta2 = self.beta1, self.beta2
+        beta_1, beta_2 = self.beta_1, self.beta_2
         is_grad_2d = gradient.shape.ndims >= 2
 
         # FIXME add multi-tensor (if usage warrants), make more standard
@@ -181,8 +181,8 @@ class Mars(optimizer.Optimizer):
             exp_avg_sq,
             lr,
             self.weight_decay_,
-            beta1,
-            beta2,
+            beta_1,
+            beta_2,
             last_grad,
             self.epsilon,
             step,

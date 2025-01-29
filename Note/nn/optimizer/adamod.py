@@ -85,13 +85,13 @@ class AdaMod(optimizer.Optimizer):
         self.step[self._get_variable_index(variable)] += 1
 
         # Decay the first and second moment running average coefficient
-        exp_avg.assign(self.beta1 * exp_avg + (1 - self.beta1) * gradient)
-        exp_avg_sq.assign(self.beta2 * exp_avg_sq + (1 - self.beta2) * tf.square(gradient))
+        exp_avg.assign(self.beta_1 * exp_avg + (1 - self.beta_1) * gradient)
+        exp_avg_sq.assign(self.beta_2 * exp_avg_sq + (1 - self.beta_2) * tf.square(gradient))
 
         denom = tf.sqrt(exp_avg_sq) + self.epsilon
 
-        bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
+        bias_correction1 = 1 - self.beta_1 ** self.step[self._get_variable_index(variable)]
+        bias_correction2 = 1 - self.beta_2 ** self.step[self._get_variable_index(variable)]
         step_size = lr * tf.sqrt(bias_correction2) / bias_correction1
 
         if self.weight_decay_ != 0:

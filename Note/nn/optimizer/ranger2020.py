@@ -24,8 +24,8 @@ class Ranger(optimizer.Optimizer):
     def __init__(
         self,
         learning_rate=1e-3,
-        beta1=.95,
-        beta2=0.999,
+        beta_1=.95,
+        beta_2=0.999,
         epsilon=1e-5,
         weight_decay=0,
         alpha=0.5,
@@ -60,8 +60,8 @@ class Ranger(optimizer.Optimizer):
             **kwargs,
         )
         self.weight_decay_ = weight_decay
-        self.beta1 = beta1
-        self.beta2 = beta2
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
         self.epsilon = epsilon
         self.alpha = alpha
         self.k = k
@@ -122,10 +122,10 @@ class Ranger(optimizer.Optimizer):
         self.step[self._get_variable_index(variable)] += 1
 
         # compute variance mov avg
-        exp_avg_sq.assign(self.beta2 * exp_avg_sq + (1 - self.beta2) * tf.square(gradient))
+        exp_avg_sq.assign(self.beta_2 * exp_avg_sq + (1 - self.beta_2) * tf.square(gradient))
 
         # compute mean moving avg
-        exp_avg.assign(self.beta1 * exp_avg + (1 - self.beta1) * gradient)
+        exp_avg.assign(self.beta_1 * exp_avg + (1 - self.beta_1) * gradient)
 
         buffered = self.radam_buffer[int(self.step[self._get_variable_index(variable)] % 10)]
 
@@ -133,16 +133,16 @@ class Ranger(optimizer.Optimizer):
             N_sma, step_size = buffered[1], buffered[2]
         else:
             buffered[0] = self.step[self._get_variable_index(variable)]
-            beta2_t = self.beta2 ** self.step[self._get_variable_index(variable)]
-            N_sma_max = 2 / (1 - self.beta2) - 1
+            beta2_t = self.beta_2 ** self.step[self._get_variable_index(variable)]
+            N_sma_max = 2 / (1 - self.beta_2) - 1
             N_sma = N_sma_max - 2 * \
                 self.step[self._get_variable_index(variable)] * beta2_t / (1 - beta2_t)
             buffered[1] = N_sma
             if N_sma > self.N_sma_threshhold:
                 step_size = math.sqrt((1 - beta2_t) * (N_sma - 4) / (N_sma_max - 4) * (
-                    N_sma - 2) / N_sma * N_sma_max / (N_sma_max - 2)) / (1 - self.beta1 ** self.step[self._get_variable_index(variable)])
+                    N_sma - 2) / N_sma * N_sma_max / (N_sma_max - 2)) / (1 - self.beta_1 ** self.step[self._get_variable_index(variable)])
             else:
-                step_size = 1.0 / (1 - self.beta1 ** self.step[self._get_variable_index(variable)])
+                step_size = 1.0 / (1 - self.beta_1 ** self.step[self._get_variable_index(variable)])
             buffered[2] = step_size
 
         # if self.weight_decay_ != 0:
@@ -179,8 +179,8 @@ class Ranger(optimizer.Optimizer):
         config.update(
             {
                 "weight_decay": self.weight_decay_,
-                "beta1": self.beta1,
-                "beta2": self.beta2,
+                "beta_1": self.beta_1,
+                "beta_2": self.beta_2,
                 "epsilon": self.epsilon,
                 "alpha": self.alpha,
                 "k": self.k,

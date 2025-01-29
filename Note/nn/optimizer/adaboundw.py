@@ -101,8 +101,8 @@ class AdaBoundW(optimizer.Optimizer):
             gradient = gradient + self.weight_decay_ * variable
 
         # Decay the first and second moment running average coefficient
-        exp_avg.assign(self.beta1 * exp_avg + (1 - self.beta1) * gradient)
-        exp_avg_sq.assign(self.beta2 * exp_avg_sq + (1 - self.beta2) * tf.square(gradient))
+        exp_avg.assign(self.beta_1 * exp_avg + (1 - self.beta_1) * gradient)
+        exp_avg_sq.assign(self.beta_2 * exp_avg_sq + (1 - self.beta_2) * tf.square(gradient))
         if self.amsbound:
             # Maintains the maximum of all 2nd moment running avg. till now
             max_exp_avg_sq.assign(tf.maximum(max_exp_avg_sq, exp_avg_sq))
@@ -111,8 +111,8 @@ class AdaBoundW(optimizer.Optimizer):
         else:
             denom = tf.sqrt(exp_avg_sq) + self.epsilon
         
-        bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
+        bias_correction1 = 1 - self.beta_1 ** self.step[self._get_variable_index(variable)]
+        bias_correction2 = 1 - self.beta_2 ** self.step[self._get_variable_index(variable)]
         step_size = lr * math.sqrt(bias_correction2) / bias_correction1
         
         # Applies bounds on actual learning rate

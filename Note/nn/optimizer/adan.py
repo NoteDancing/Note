@@ -152,8 +152,8 @@ class Adan(optimizer.Optimizer):
         
         self.step += 1
         
-        bias_correction1 = 1 - self.beta1 ** self.step
-        bias_correction2 = 1 - self.beta2 ** self.step
+        bias_correction1 = 1 - self.beta_1 ** self.step
+        bias_correction2 = 1 - self.beta_2 ** self.step
         bias_correction3 = 1 - self.beta3 ** self.step
         
         for i in range(len(trainable_variables)):
@@ -175,8 +175,8 @@ class Adan(optimizer.Optimizer):
             exp_avg_sqs=exp_avg_sqs,
             exp_avg_diffs=exp_avg_diffs,
             neg_pre_grads=neg_pre_grads,
-            beta1=self.beta1,
-            beta2=self.beta2,
+            beta_1=self.beta_1,
+            beta_2=self.beta_2,
             beta3=self.beta3,
             bias_correction1=bias_correction1,
             bias_correction2=bias_correction2,
@@ -210,7 +210,7 @@ class Adan(optimizer.Optimizer):
 
 def _single_tensor_adan(
     params, grads, exp_avgs, exp_avg_sqs, exp_avg_diffs, neg_pre_grads,
-    beta1, beta2, beta3, bias_correction1, bias_correction2,
+    beta_1, beta_2, beta3, bias_correction1, bias_correction2,
     bias_correction3_sqrt, lr, weight_decay, eps, no_prox, caution,
 ):
     for i, param in enumerate(params):
@@ -223,14 +223,14 @@ def _single_tensor_adan(
         # for memory saving, we use `neg_grad_or_diff` to get some temp variable in an inplace way
         neg_grad_or_diff.assign_add(grad)
 
-        exp_avg.assign(beta1 * exp_avg + (1 - beta1) * grad)  # m_t
-        exp_avg_diff.assign(beta2 * exp_avg_diff + (1 - beta2) * neg_grad_or_diff)  # diff_t
+        exp_avg.assign(beta_1 * exp_avg + (1 - beta_1) * grad)  # m_t
+        exp_avg_diff.assign(beta_2 * exp_avg_diff + (1 - beta_2) * neg_grad_or_diff)  # diff_t
 
-        neg_grad_or_diff.assign(beta2 * neg_grad_or_diff + grad)
+        neg_grad_or_diff.assign(beta_2 * neg_grad_or_diff + grad)
         exp_avg_sq.assign(beta3 * exp_avg_sq + (1 - beta3) * tf.square(neg_grad_or_diff))  # n_t
 
         denom = tf.sqrt(exp_avg_sq / bias_correction3_sqrt) + eps
-        step_size_diff = lr * beta2 / bias_correction2
+        step_size_diff = lr * beta_2 / bias_correction2
         step_size = lr / bias_correction1
         
         if caution:
@@ -253,7 +253,7 @@ def _single_tensor_adan(
 
 def _multi_tensor_adan(
     params, grads, exp_avgs, exp_avg_sqs, exp_avg_diffs, neg_pre_grads,
-    beta1, beta2, beta3, bias_correction1, bias_correction2,
+    beta_1, beta_2, beta3, bias_correction1, bias_correction2,
     bias_correction3_sqrt, lr, weight_decay, eps, no_prox, caution,
 ):
     if len(params) == 0:
@@ -261,21 +261,21 @@ def _multi_tensor_adan(
 
     neg_pre_grads = [neg_pre_grad.assign(neg_pre_grad + grad) for neg_pre_grad, grad in zip(neg_pre_grads, grads)]
 
-    exp_avgs = [exp_avg.assign(beta1 * exp_avg + (1 - beta1) * grad) for exp_avg, grad in zip(exp_avgs, grads)]
+    exp_avgs = [exp_avg.assign(beta_1 * exp_avg + (1 - beta_1) * grad) for exp_avg, grad in zip(exp_avgs, grads)]
 
     exp_avg_diffs = [
-        exp_avg_diff.assign(beta2 * exp_avg_diff + (1 - beta2) * neg_pre_grad)
+        exp_avg_diff.assign(beta_2 * exp_avg_diff + (1 - beta_2) * neg_pre_grad)
         for exp_avg_diff, neg_pre_grad in zip(exp_avg_diffs, neg_pre_grads)
     ]
 
-    neg_pre_grads = [neg_pre_grad.assign(beta2 * neg_pre_grad + grad) for neg_pre_grad, grad in zip(neg_pre_grads, grads)]
+    neg_pre_grads = [neg_pre_grad.assign(beta_2 * neg_pre_grad + grad) for neg_pre_grad, grad in zip(neg_pre_grads, grads)]
     exp_avg_sqs = [
         exp_avg_sq.assign(beta3 * exp_avg_sq + (1 - beta3) * tf.square(neg_pre_grad))
         for exp_avg_sq, neg_pre_grad in zip(exp_avg_sqs, neg_pre_grads)
     ]
 
     denom = [tf.sqrt(exp_avg_sq / bias_correction3_sqrt) + eps for exp_avg_sq in exp_avg_sqs]
-    step_size_diff = lr * beta2 / bias_correction2
+    step_size_diff = lr * beta_2 / bias_correction2
     step_size = lr / bias_correction1
     
     if caution:

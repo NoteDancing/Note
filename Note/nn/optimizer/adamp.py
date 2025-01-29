@@ -107,20 +107,20 @@ class AdamP(optimizer.Optimizer):
     def update_step(self, gradient, variable, learning_rate):
         lr = tf.cast(learning_rate, variable.dtype)
         exp_avg, exp_avg_sq = self.exp_avg[self._get_variable_index(variable)], self.exp_avg_sq[self._get_variable_index(variable)]
-        beta1, beta2 = self.beta1, self.beta2
+        beta_1, beta_2 = self.beta_1, self.beta_2
 
         self.step[self._get_variable_index(variable)] += 1
-        bias_correction1 = 1 - beta1 ** self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - beta2 ** self.step[self._get_variable_index(variable)]
+        bias_correction1 = 1 - beta_1 ** self.step[self._get_variable_index(variable)]
+        bias_correction2 = 1 - beta_2 ** self.step[self._get_variable_index(variable)]
 
-        exp_avg.assign(exp_avg * beta1 + gradient * (1 - beta1))
-        exp_avg_sq.assign(exp_avg_sq * beta2 + gradient * gradient * (1 - beta2))
+        exp_avg.assign(exp_avg * beta_1 + gradient * (1 - beta_1))
+        exp_avg_sq.assign(exp_avg_sq * beta_2 + gradient * gradient * (1 - beta_2))
 
         denom = (tf.sqrt(exp_avg_sq) / math.sqrt(bias_correction2)) + self.epsilon
         step_size = lr / bias_correction1
 
         if self.nesterov:
-            perturb = (beta1 * exp_avg + (1 - beta1) * gradient) / denom
+            perturb = (beta_1 * exp_avg + (1 - beta_1) * gradient) / denom
         else:
             perturb = exp_avg / denom
 

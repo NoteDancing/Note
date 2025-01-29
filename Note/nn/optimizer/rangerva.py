@@ -41,8 +41,8 @@ class RangerVA(optimizer.Optimizer):
     def __init__(
         self,
         learning_rate=1e-3,
-        beta1=.95,
-        beta2=0.999,
+        beta_1=.95,
+        beta_2=0.999,
         epsilon=1e-5,
         weight_decay=0,
         alpha=0.5,
@@ -78,8 +78,8 @@ class RangerVA(optimizer.Optimizer):
             **kwargs,
         )
         self.weight_decay_ = weight_decay
-        self.beta1 = beta1
-        self.beta2 = beta2
+        self.beta_1 = beta_1
+        self.beta_2 = beta_2
         self.epsilon = epsilon
         self.alpha = alpha
         self.k = k
@@ -137,9 +137,9 @@ class RangerVA(optimizer.Optimizer):
             max_exp_avg_sq = self.max_exp_avg_sq[self._get_variable_index(variable)]
 
         # compute variance mov avg
-        exp_avg_sq.assign(self.beta2 * exp_avg_sq + (1 - self.beta2) * tf.square(gradient))
+        exp_avg_sq.assign(self.beta_2 * exp_avg_sq + (1 - self.beta_2) * tf.square(gradient))
         # compute mean moving avg
-        exp_avg.assign(self.beta1 * exp_avg + (1 - self.beta1) * gradient)
+        exp_avg.assign(self.beta_1 * exp_avg + (1 - self.beta_1) * gradient)
         
         ##transformer
         if self.grad_transformer == 'square':
@@ -147,7 +147,7 @@ class RangerVA(optimizer.Optimizer):
         elif self.grad_transformer == 'abs':
             grad_tmp = tf.abs(gradient)
         
-        exp_avg_sq.assign(self.beta2 * exp_avg_sq + (1 - self.beta2) * grad_tmp)
+        exp_avg_sq.assign(self.beta_2 * exp_avg_sq + (1 - self.beta_2) * grad_tmp)
         
         if self.amsgrad:
             # Maintains the maximum of all 2nd moment running avg. till now
@@ -166,8 +166,8 @@ class RangerVA(optimizer.Optimizer):
         if self.weight_decay_ != 0:
             variable_fp32.assign_add(-self.weight_decay * lr * variable_fp32)
         
-        bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
+        bias_correction1 = 1 - self.beta_1 ** self.step[self._get_variable_index(variable)]
+        bias_correction2 = 1 - self.beta_2 ** self.step[self._get_variable_index(variable)]
         step_size = lr * math.sqrt(bias_correction2) / bias_correction1 
 
         # ...let's use calibrated alr 
@@ -196,8 +196,8 @@ class RangerVA(optimizer.Optimizer):
         config.update(
             {
                 "weight_decay": self.weight_decay_,
-                "beta1": self.beta1,
-                "beta2": self.beta2,
+                "beta_1": self.beta_1,
+                "beta_2": self.beta_2,
                 "epsilon": self.epsilon,
                 "alpha": self.alpha,
                 "k": self.k,
