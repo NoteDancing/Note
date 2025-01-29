@@ -112,6 +112,7 @@ class AdaBelief(optimizer.Optimizer):
 
     def update_step(self, gradient, variable, learning_rate):
         lr = tf.cast(learning_rate, variable.dtype)
+        variable_fp32 = variable
         if variable.dtype in {tf.float16, tf.bfloat16}:
             variable_fp32 = tf.Variable(tf.cast(variable, 'float32'))
         if gradient.dtype in {tf.float16, tf.bfloat16}:
