@@ -12,8 +12,8 @@ class Adahessian(optimizer.Optimizer):
     def __init__(
         self,
         learning_rate=0.1,
-        beta_1=0.9,
-        beta_2=0.999,
+        beta1=0.9,
+        beta2=0.999,
         epsilon=1e-8,
         weight_decay=0.0,
         hessian_power=1.0,
@@ -46,8 +46,8 @@ class Adahessian(optimizer.Optimizer):
             **kwargs,
         )
         self.weight_decay_ = weight_decay
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
+        self.beta1 = beta1
+        self.beta2 = beta2
         self.epsilon = epsilon
         self.hessian_power = hessian_power
         self.update_each = update_each
@@ -150,11 +150,11 @@ class Adahessian(optimizer.Optimizer):
             self.step[self._get_variable_index(p)] += 1
             
             # Decay the first and second moment running average coefficient
-            exp_avg.assign(self.beta_1 * exp_avg + (1 - self.beta_1) * grad)
-            exp_hessian_diag_sq.assign(self.beta_2 * exp_hessian_diag_sq + (1 - self.beta_2) * tf.square(p.hess))
+            exp_avg.assign(self.beta1 * exp_avg + (1 - self.beta1) * grad)
+            exp_hessian_diag_sq.assign(self.beta2 * exp_hessian_diag_sq + (1 - self.beta2) * tf.square(p.hess))
            
-            bias_correction1 = 1 - self.beta_1 ** self.step[self._get_variable_index(p)]
-            bias_correction2 = 1 - self.beta_2 ** self.step[self._get_variable_index(p)]
+            bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(p)]
+            bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(p)]
             
             k = self.hessian_power
             denom = tf.pow(exp_hessian_diag_sq / bias_correction2, k / 2) + self.epsilon
@@ -168,8 +168,8 @@ class Adahessian(optimizer.Optimizer):
         config.update(
             {
                 "weight_decay": self.weight_decay_,
-                "beta_1": self.beta_1,
-                "beta_2": self.beta_2,
+                "beta1": self.beta1,
+                "beta2": self.beta2,
                 "epsilon": self.epsilon,
                 "hessian_power": self.hessian_power,
                 "update_each": self.update_each,

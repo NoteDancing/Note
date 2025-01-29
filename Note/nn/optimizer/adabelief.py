@@ -11,8 +11,8 @@ class AdaBelief(optimizer.Optimizer):
     def __init__(
         self,
         learning_rate=1e-3,
-        beta_1=0.9,
-        beta_2=0.999,
+        beta1=0.9,
+        beta2=0.999,
         epsilon=1e-16,
         weight_decay=0,
         amsgrad=False,
@@ -46,8 +46,8 @@ class AdaBelief(optimizer.Optimizer):
             **kwargs,
         )
         self.weight_decay_ = weight_decay
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
+        self.beta1 = beta1
+        self.beta2 = beta2
         self.epsilon = epsilon
         self.amsgrad = amsgrad
         self.decoupled_decay = decoupled_decay
@@ -133,13 +133,13 @@ class AdaBelief(optimizer.Optimizer):
         exp_avg_var = self.exp_avg_var[self._get_variable_index(variable)]
 
         self.step[self._get_variable_index(variable)] += 1
-        bias_correction1 = 1 - self.beta_1 ** self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - self.beta_2 ** self.step[self._get_variable_index(variable)]
+        bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
+        bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
 
         # Update first and second moment running average
-        exp_avg.assign(exp_avg * self.beta_1 + (1 - self.beta_1) * gradient)
+        exp_avg.assign(exp_avg * self.beta1 + (1 - self.beta1) * gradient)
         grad_residual = gradient - exp_avg
-        exp_avg_var.assign(exp_avg_var * self.beta_2 + (1 - self.beta_2) * grad_residual * grad_residual)
+        exp_avg_var.assign(exp_avg_var * self.beta2 + (1 - self.beta2) * grad_residual * grad_residual)
 
         if self.amsgrad:
             max_exp_avg_var = self.max_exp_avg_var[self._get_variable_index(variable)]
@@ -163,8 +163,8 @@ class AdaBelief(optimizer.Optimizer):
                 num_sma, step_size = buffered[1], buffered[2]
             else:
                 buffered[0] = self.step[self._get_variable_index(variable)]
-                beta2_t = self.beta_2 ** self.step[self._get_variable_index(variable)]
-                num_sma_max = 2 / (1 - self.beta_2) - 1
+                beta2_t = self.beta2 ** self.step[self._get_variable_index(variable)]
+                num_sma_max = 2 / (1 - self.beta2) - 1
                 num_sma = num_sma_max - 2 * self.step[self._get_variable_index(variable)] * beta2_t / (1 - beta2_t)
                 buffered[1] = num_sma
 
@@ -174,9 +174,9 @@ class AdaBelief(optimizer.Optimizer):
                         (1 - beta2_t) *
                         (num_sma - 4) / (num_sma_max - 4) *
                         (num_sma - 2) / num_sma *
-                        num_sma_max / (num_sma_max - 2)) / (1 - self.beta_1 ** self.step[self._get_variable_index(variable)])
+                        num_sma_max / (num_sma_max - 2)) / (1 - self.beta1 ** self.step[self._get_variable_index(variable)])
                 elif self.degenerated_to_sgd:
-                    step_size = 1.0 / (1 - self.beta_1 ** self.step[self._get_variable_index(variable)])
+                    step_size = 1.0 / (1 - self.beta1 ** self.step[self._get_variable_index(variable)])
                 else:
                     step_size = -1
                 buffered[2] = step_size
@@ -195,8 +195,8 @@ class AdaBelief(optimizer.Optimizer):
         config.update(
             {
                 "weight_decay": self.weight_decay_,
-                "beta_1": self.beta_1,
-                "beta_2": self.beta_2,
+                "beta1": self.beta1,
+                "beta2": self.beta2,
                 "epsilon": self.epsilon,
                 "amsgrad": self.amsgrad,
                 "decoupled_decay": self.decoupled_decay,

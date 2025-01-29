@@ -44,8 +44,8 @@ class AdamP(optimizer.Optimizer):
     def __init__(
         self,
         learning_rate=1e-3,
-        beta_1=0.9,
-        beta_2=0.999,
+        beta1=0.9,
+        beta2=0.999,
         epsilon=1e-8,
         weight_decay=0,
         delta=0.1,
@@ -77,8 +77,8 @@ class AdamP(optimizer.Optimizer):
             **kwargs,
         )
         self.weight_decay_ = weight_decay
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
+        self.beta1 = beta1
+        self.beta2 = beta2
         self.epsilon = epsilon
         self.delta = delta
         self.wd_ratio = wd_ratio
@@ -107,20 +107,20 @@ class AdamP(optimizer.Optimizer):
     def update_step(self, gradient, variable, learning_rate):
         lr = tf.cast(learning_rate, variable.dtype)
         exp_avg, exp_avg_sq = self.exp_avg[self._get_variable_index(variable)], self.exp_avg_sq[self._get_variable_index(variable)]
-        beta_1, beta_2 = self.beta_1, self.beta_2
+        beta1, beta2 = self.beta1, self.beta2
 
         self.step[self._get_variable_index(variable)] += 1
-        bias_correction1 = 1 - beta_1 ** self.step[self._get_variable_index(variable)]
-        bias_correction2 = 1 - beta_2 ** self.step[self._get_variable_index(variable)]
+        bias_correction1 = 1 - beta1 ** self.step[self._get_variable_index(variable)]
+        bias_correction2 = 1 - beta2 ** self.step[self._get_variable_index(variable)]
 
-        exp_avg.assign(exp_avg * beta_1 + gradient * (1 - beta_1))
-        exp_avg_sq.assign(exp_avg_sq * beta_2 + gradient * gradient * (1 - beta_2))
+        exp_avg.assign(exp_avg * beta1 + gradient * (1 - beta1))
+        exp_avg_sq.assign(exp_avg_sq * beta2 + gradient * gradient * (1 - beta2))
 
         denom = (tf.sqrt(exp_avg_sq) / math.sqrt(bias_correction2)) + self.epsilon
         step_size = lr / bias_correction1
 
         if self.nesterov:
-            perturb = (beta_1 * exp_avg + (1 - beta_1) * gradient) / denom
+            perturb = (beta1 * exp_avg + (1 - beta1) * gradient) / denom
         else:
             perturb = exp_avg / denom
 
@@ -141,8 +141,8 @@ class AdamP(optimizer.Optimizer):
         config.update(
             {
                 "weight_decay": self.weight_decay_,
-                "beta_1": self.beta_1,
-                "beta_2": self.beta_2,
+                "beta1": self.beta1,
+                "beta2": self.beta2,
                 "epsilon": self.epsilon,
                 "delta": self.delta,
                 "wd_ratio": self.wd_ratio,

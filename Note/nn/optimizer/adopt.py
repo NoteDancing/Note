@@ -49,8 +49,8 @@ class Adopt(optimizer.Optimizer):
     def __init__(
         self,
         learning_rate=1e-3,
-        beta_1=0.9,
-        beta_2=0.9999,
+        beta1=0.9,
+        beta2=0.9999,
         epsilon=1e-6,
         weight_decay=0.0,
         clip_exp=0.333,
@@ -86,8 +86,8 @@ class Adopt(optimizer.Optimizer):
             **kwargs,
         )
         self.weight_decay_ = weight_decay
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
+        self.beta1 = beta1
+        self.beta2 = beta2
         self.epsilon = epsilon
         self.clip_exp = clip_exp
         self.decoupled = decoupled
@@ -179,8 +179,8 @@ class Adopt(optimizer.Optimizer):
             exp_avg_sqs,
             state_steps,
             has_complex=has_complex,
-            beta_1=self.beta_1,
-            beta_2=self.beta_2,
+            beta1=self.beta1,
+            beta2=self.beta2,
             lr=lr,
             weight_decay=self.weight_decay_,
             clip_exp=self.clip_exp,
@@ -200,8 +200,8 @@ class Adopt(optimizer.Optimizer):
         config.update(
             {
                 "weight_decay": self.weight_decay_,
-                "beta_1": self.beta_1,
-                "beta_2": self.beta_2,
+                "beta1": self.beta1,
+                "beta2": self.beta2,
                 "epsilon": self.epsilon,
                 "clip_exp": self.clip_exp,
                 "decoupled": self.decoupled,
@@ -223,8 +223,8 @@ def _single_tensor_adopt(
     state_steps,
     *,
     has_complex,
-    beta_1,
-    beta_2,
+    beta1,
+    beta2,
     lr,
     weight_decay,
     clip_exp,
@@ -270,7 +270,7 @@ def _single_tensor_adopt(
             clip_val = (step - 1) ** clip_exp
             normed_grad = tf.clip_by_value(normed_grad, -clip_val, clip_val)
 
-        exp_avg.assign(beta_1 * exp_avg + (1 - beta_1) * normed_grad)
+        exp_avg.assign(beta1 * exp_avg + (1 - beta1) * normed_grad)
 
         if caution:
             # Apply caution as per 'Cautious Optimizers' - https://arxiv.org/abs/2411.16085
@@ -280,13 +280,13 @@ def _single_tensor_adopt(
 
         param.assign_add(-lr * exp_avg)
 
-        exp_avg_sq.assign(beta_2 * exp_avg_sq + (1 - beta_2) * tf.math.conj(grad) * grad)
+        exp_avg_sq.assign(beta2 * exp_avg_sq + (1 - beta2) * tf.math.conj(grad) * grad)
 
 
 def _multi_tensor_adopt(
         params, grads, exp_avgs, exp_avg_sqs, state_steps, 
         grad_scale, found_inf, *,
-        has_complex, beta_1, beta_2, lr,
+        has_complex, beta1, beta2, lr,
         weight_decay, clip_exp, decoupled, eps,
         caution, maximize, capturable, differentiable):
     # Handle complex parameters
@@ -340,13 +340,13 @@ def _multi_tensor_adopt(
     update_params(params, grads, weight_decay, decoupled)
 
     normed_grad = normalize_grads(grads, exp_avg_sqs, eps, clip_exp, state_steps)
-    [avg.assign((1 - beta_1) * grad + beta_1 * avg) for avg, grad in zip(exp_avgs, normed_grad)]
+    [avg.assign((1 - beta1) * grad + beta1 * avg) for avg, grad in zip(exp_avgs, normed_grad)]
 
     if caution:
         exp_avgs = apply_caution(exp_avgs, grads, caution)
     
     [param.assign_add(-lr * avg) for param, avg in zip(params, exp_avgs)]
-    [sq.assign(beta_2 * sq + (1 - beta_2) * grad * grad) for sq, grad in zip(exp_avg_sqs, grads)]
+    [sq.assign(beta2 * sq + (1 - beta2) * grad * grad) for sq, grad in zip(exp_avg_sqs, grads)]
 
 
 def adopt(
@@ -362,8 +362,8 @@ def adopt(
         found_inf,
         has_complex,
         *,
-        beta_1,
-        beta_2,
+        beta1,
+        beta2,
         lr,
         weight_decay,
         clip_exp,
@@ -390,8 +390,8 @@ def adopt(
         exp_avg_sqs,
         state_steps,
         has_complex=has_complex,
-        beta_1=beta_1,
-        beta_2=beta_2,
+        beta1=beta1,
+        beta2=beta2,
         lr=lr,
         weight_decay=weight_decay,
         clip_exp=clip_exp,

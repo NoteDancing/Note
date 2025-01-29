@@ -15,8 +15,8 @@ class NvNovoGrad(optimizer.Optimizer):
     def __init__(
         self,
         learning_rate=1e-3,
-        beta_1=0.95,
-        beta_2=0.98,
+        beta1=0.95,
+        beta2=0.98,
         epsilon=1e-8,
         weight_decay=0,
         grad_averaging=False,
@@ -47,8 +47,8 @@ class NvNovoGrad(optimizer.Optimizer):
             **kwargs,
         )
         self.weight_decay_ = weight_decay
-        self.beta_1 = beta_1
-        self.beta_2 = beta_2
+        self.beta1 = beta1
+        self.beta2 = beta2
         self.epsilon = epsilon
         self.grad_averaging = grad_averaging
         self.amsgrad = amsgrad
@@ -92,7 +92,7 @@ class NvNovoGrad(optimizer.Optimizer):
         exp_avg_sq = self.exp_avg_sq[self._get_variable_index(variable)]
         if self.amsgrad:
             max_exp_avg_sq = self.max_exp_avg_sq[self._get_variable_index(variable)]
-        beta_1, beta_2 = self.beta_1, self.beta_2
+        beta1, beta2 = self.beta1, self.beta2
         
         self.step[self._get_variable_index(variable)] += 1
 
@@ -101,7 +101,7 @@ class NvNovoGrad(optimizer.Optimizer):
         if exp_avg_sq == 0:
             exp_avg_sq.assign(norm)
         else:
-            exp_avg_sq.assign(beta_2 * exp_avg_sq + (1 - beta_2) * norm)
+            exp_avg_sq.assign(beta2 * exp_avg_sq + (1 - beta2) * norm)
             
         if self.amsgrad:
             max_exp_avg_sq.assign(tf.maximum(max_exp_avg_sq, exp_avg_sq))
@@ -113,8 +113,8 @@ class NvNovoGrad(optimizer.Optimizer):
         if self.weight_decay_ != 0:
             gradient.assign_add(self.weight_decay_ * variable)
         if self.grad_averaging:
-            gradient.assign(gradient * (1 - beta_1))
-        exp_avg.assign(beta_1 * exp_avg + gradient)
+            gradient.assign(gradient * (1 - beta1))
+        exp_avg.assign(beta1 * exp_avg + gradient)
         
         variable.assign_add(-lr * exp_avg)
     
@@ -123,8 +123,8 @@ class NvNovoGrad(optimizer.Optimizer):
         config.update(
             {
                 "weight_decay": self.weight_decay_,
-                "beta_1": self.beta_1,
-                "beta_2": self.beta_2,
+                "beta1": self.beta1,
+                "beta2": self.beta2,
                 "epsilon": self.epsilon,
                 "grad_averaging": self.grad_averaging,
                 "amsgrad": self.amsgrad,
