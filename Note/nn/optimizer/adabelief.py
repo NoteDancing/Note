@@ -116,7 +116,7 @@ class AdaBelief(optimizer.Optimizer):
         if variable.dtype in {tf.float16, tf.bfloat16}:
             variable_fp32 = tf.Variable(tf.cast(variable, 'float32'))
         if gradient.dtype in {tf.float16, tf.bfloat16}:
-            gradient = tf.cast(gradient, 'float32')
+            gradient = tf.Variable(tf.cast(gradient, 'float32'))
         
         # perform weight decay, check if decoupled weight decay
         if self.decoupled_decay:
