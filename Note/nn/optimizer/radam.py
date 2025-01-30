@@ -70,7 +70,10 @@ class RAdam(optimizer.Optimizer):
             self.step.append(0)
 
     def update_step(self, gradient, variable, learning_rate):
-        variable_fp32 = tf.Variable(tf.cast(variable, 'float32'))
+        if variable.dtype != tf.float32:
+            variable_fp32 = tf.cast(variable, 'float32')
+        else:
+            variable_fp32 = variable
         lr = tf.cast(learning_rate, variable.dtype)
         
         exp_avg = self.exp_avg[self._get_variable_index(variable)]
@@ -103,14 +106,14 @@ class RAdam(optimizer.Optimizer):
             buffered[2] = step_size
         
         if self.weight_decay_ != 0:
-            variable_fp32.assign_add(-self.weight_decay_ * lr * variable_fp32)
+            variable_fp32 += -self.weight_decay_ * lr * variable_fp32
         
         # more conservative since it's an approximated value
         if num_sma >= 5:
             denom = tf.sqrt(exp_avg_sq) + self.epsilon
-            variable_fp32.assign_add(-step_size * exp_avg / denom)
+            variable_fp32 += -step_size * exp_avg / denom
         else:
-            variable_fp32.assign_add(-step_size * exp_avg)
+            variable_fp32 += -step_size * exp_avg
         
         variable.assign(tf.cast(variable_fp32, variable.dtype))
 

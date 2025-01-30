@@ -114,19 +114,19 @@ class AdaBelief(optimizer.Optimizer):
         lr = tf.cast(learning_rate, variable.dtype)
         variable_fp32 = variable
         if variable.dtype in {tf.float16, tf.bfloat16}:
-            variable_fp32 = tf.Variable(tf.cast(variable, 'float32'))
+            variable_fp32 = tf.cast(variable, 'float32')
         if gradient.dtype in {tf.float16, tf.bfloat16}:
-            gradient = tf.Variable(tf.cast(gradient, 'float32'))
+            gradient = tf.cast(gradient, 'float32')
         
         # perform weight decay, check if decoupled weight decay
         if self.decoupled_decay:
             if not self.fixed_decay:
-                variable_fp32.assign(variable_fp32 * (1.0 - lr * self.weight_decay_))
+                variable_fp32 = variable_fp32 * (1.0 - lr * self.weight_decay_)
             else:
-                variable_fp32.assign(variable_fp32 * (1.0 - self.weight_decay_))
+                variable_fp32 = variable_fp32 * (1.0 - self.weight_decay_)
         else:
             if self.weight_decay_ != 0:
-                gradient.assign_add(self.weight_decay_ * variable_fp32)
+                gradient += self.weight_decay_ * variable_fp32
 
         # get current state variable
         exp_avg = self.exp_avg[self._get_variable_index(variable)]
@@ -155,7 +155,7 @@ class AdaBelief(optimizer.Optimizer):
         if not self.rectify:
             # Default update
             step_size = lr / bias_correction1
-            variable_fp32.assign_add(-step_size * exp_avg / denom)
+            variable_fp32 += -step_size * exp_avg / denom
         else:
             # Rectified update, forked from RAdam
             buffered = self.buffer[int(self.step[self._get_variable_index(variable)] % 10)]
@@ -183,9 +183,9 @@ class AdaBelief(optimizer.Optimizer):
 
             if num_sma >= 5:
                 denom = tf.sqrt(exp_avg_var) + self.epsilon
-                variable_fp32.assign_add(-step_size * lr * exp_avg / denom)
+                variable_fp32 += -step_size * lr * exp_avg / denom
             elif step_size > 0:
-                variable_fp32.assign_add(-step_size * lr * exp_avg)
+                variable_fp32 += -step_size * lr * exp_avg
         
         if variable.dtype in {tf.float16, tf.bfloat16}:
             variable.assign(variable_fp32)

@@ -86,8 +86,12 @@ class Ranger(optimizer.Optimizer):
             self.step.append(0)
 
     def update_step(self, gradient, variable, learning_rate):
-        gradient = tf.cast(gradient, 'float32')
-        variable_fp32 = tf.Variable(tf.cast(variable, 'float32'))
+        if gradient.dtype != tf.float32:
+            gradient = tf.cast(gradient, 'float32')
+        if variable.dtype != tf.float32:
+            variable_fp32 = tf.cast(variable, 'float32')
+        else:
+            variable_fp32 = variable
         lr = tf.cast(learning_rate, variable_fp32.dtype)
         
         if tf.keras.backend.is_sparse(gradient):
@@ -135,14 +139,14 @@ class Ranger(optimizer.Optimizer):
             buffered[2] = step_size
             
         if self.weight_decay_ != 0:
-            variable_fp32.assign_sub(self.weight_decay_ * lr * variable_fp32)
+            variable_fp32 -= self.weight_decay_ * lr * variable_fp32
 
         # apply lr
         if N_sma > self.N_sma_threshhold:
             denom = denom = tf.sqrt(exp_avg_sq) + self.epsilon
-            variable_fp32.assign_sub(lr * step_size * exp_avg / denom)
+            variable_fp32 -= lr * step_size * exp_avg / denom
         else:
-            variable_fp32.assign_sub(lr * step_size * exp_avg)
+            variable_fp32 -= lr * step_size * exp_avg
 
         variable.assign(tf.cast(variable_fp32, variable.dtype))
 

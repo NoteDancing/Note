@@ -101,8 +101,12 @@ class Ranger(optimizer.Optimizer):
             self.step.append(0)
 
     def update_step(self, gradient, variable, learning_rate):
-        gradient = tf.cast(gradient, 'float32')
-        variable_fp32 = tf.Variable(tf.cast(variable, 'float32'))
+        if gradient.dtype != tf.float32:
+            gradient = tf.cast(gradient, 'float32')
+        if variable.dtype != tf.float32:
+            variable_fp32 = tf.cast(variable, 'float32')
+        else:
+            variable_fp32 = variable
         lr = tf.cast(learning_rate, variable_fp32.dtype)
         
         if tf.keras.backend.is_sparse(gradient):
@@ -161,7 +165,7 @@ class Ranger(optimizer.Optimizer):
         if self.gc_loc == False:
             G_grad = centralized_gradient(G_grad, use_gc=self.use_gc, gc_conv_only=self.gc_conv_only)
 
-        variable_fp32.assign_add(-step_size * lr * G_grad)
+        variable_fp32 += -step_size * lr * G_grad
         variable.assign(tf.cast(variable_fp32, variable.dtype))
 
         # integrated look ahead...

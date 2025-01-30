@@ -122,8 +122,12 @@ class RangerVA(optimizer.Optimizer):
             self.step.append(0)
 
     def update_step(self, gradient, variable, learning_rate):
-        gradient = tf.cast(gradient, 'float32')
-        variable_fp32 = tf.Variable(tf.cast(variable, 'float32'))
+        if gradient.dtype != tf.float32:
+            gradient = tf.cast(gradient, 'float32')
+        if variable.dtype != tf.float32:
+            variable_fp32 = tf.cast(variable, 'float32')
+        else:
+            variable_fp32 = variable
         lr = tf.cast(learning_rate, variable_fp32.dtype)
         
         if tf.keras.backend.is_sparse(gradient):
@@ -164,7 +168,7 @@ class RangerVA(optimizer.Optimizer):
         self.step[self._get_variable_index(variable)] += 1
         
         if self.weight_decay_ != 0:
-            variable_fp32.assign_add(-self.weight_decay * lr * variable_fp32)
+            variable_fp32 += -self.weight_decay * lr * variable_fp32
         
         bias_correction1 = 1 - self.beta1 ** self.step[self._get_variable_index(variable)]
         bias_correction2 = 1 - self.beta2 ** self.step[self._get_variable_index(variable)]
@@ -174,10 +178,10 @@ class RangerVA(optimizer.Optimizer):
         if  self.transformer =='softplus':
             sp = Softplus(self.smooth)
             denomf = sp(denomc)
-            variable_fp32.assign_add(-step_size * exp_avg / denomf)
+            variable_fp32 += -step_size * exp_avg / denomf
         else:
             denom = tf.sqrt(exp_avg_sq) + self.epsilon
-            variable_fp32.assign_add(-step_size * lr * exp_avg / denom)
+            variable_fp32 += -step_size * lr * exp_avg / denom
 
         variable.assign(tf.cast(variable_fp32, variable.dtype))
 
