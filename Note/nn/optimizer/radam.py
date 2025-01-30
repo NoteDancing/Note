@@ -73,7 +73,7 @@ class RAdam(optimizer.Optimizer):
         if variable.dtype != tf.float32:
             variable_fp32 = tf.cast(variable, 'float32')
         else:
-            variable_fp32 = variable
+            variable_fp32 = tf.convert_to_tensor(variable)
         lr = tf.cast(learning_rate, variable.dtype)
         
         exp_avg = self.exp_avg[self._get_variable_index(variable)]
