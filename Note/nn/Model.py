@@ -56,6 +56,7 @@ class Model:
         self.val_accuracy=1
         self.save_best_only=False
         self.save_param_only=False
+        self.callbacks=[]
         self.info=dict()
         self.batch_counter=0
         self.path_list=[]
@@ -514,13 +515,13 @@ class Model:
     
     
     def test_(self,test_ds, loss_object, test_loss, test_accuracy, processes, mp, jit_compile):
-        if mp==None:
-            if test_loss!=None:
-                test_loss.reset_states()
-            if test_accuracy!=None:
-                test_accuracy.reset_states()
-            if test_ds!=None:
+        if test_ds!=None:
+            if mp==None:
                 self.training()
+                if test_loss!=None:
+                    test_loss.reset_states()
+                if test_accuracy!=None:
+                    test_accuracy.reset_states()
                 for test_data, labels in test_ds:
                     if jit_compile==True:
                         self.test_step(test_data, labels)
@@ -531,37 +532,37 @@ class Model:
                 if test_accuracy!=None:
                     self.test_acc=test_accuracy.result().numpy()
                 self.training(True)
-        else:
-            self.training()
-            if not isinstance(self.shared_test_loss_array, mp.sharedctypes.SynchronizedArray):
-                self.shared_test_loss_array=mp.Array('f',np.zeros([processes],dtype='float32'))
-            if test_accuracy!=None:
-                if not isinstance(self.shared_test_acc_array, mp.sharedctypes.SynchronizedArray):
-                    self.shared_test_acc_array=mp.Array('f',np.zeros([processes],dtype='float32'))
-            
-            process_list=[]
-            for p in range(processes):
-                test_loss_=test_loss[p]
-                if test_accuracy!=None:
-                    test_accuracy_=test_accuracy[p]
-                process=mp.Process(target=self.parallel_test,args=(test_ds[p], loss_object, test_loss_, test_accuracy_, jit_compile, p))
-                process.start()
-                process_list.append(process)
-            for process in process_list:
-                test_loss[p].reset_states()
-                if test_accuracy!=None:
-                    test_accuracy[p].reset_states()
-                process.join()
-                
-            if test_accuracy!=None:
-                self.test_loss,self.test_acc=np.sum(npc.as_array(self.shared_test_loss_array.get_obj()))/processes,np.sum(npc.as_array(self.shared_test_acc_array.get_obj()))/processes
             else:
-                self.test_loss=np.sum(npc.as_array(self.shared_test_loss_array.get_obj()))/processes
-            self.training(True)
+                self.training()
+                if not isinstance(self.shared_test_loss_array, mp.sharedctypes.SynchronizedArray):
+                    self.shared_test_loss_array=mp.Array('f',np.zeros([processes],dtype='float32'))
+                if test_accuracy!=None:
+                    if not isinstance(self.shared_test_acc_array, mp.sharedctypes.SynchronizedArray):
+                        self.shared_test_acc_array=mp.Array('f',np.zeros([processes],dtype='float32'))
+                
+                process_list=[]
+                for p in range(processes):
+                    test_loss_=test_loss[p]
+                    if test_accuracy!=None:
+                        test_accuracy_=test_accuracy[p]
+                    process=mp.Process(target=self.parallel_test,args=(test_ds[p], loss_object, test_loss_, test_accuracy_, jit_compile, p))
+                    process.start()
+                    process_list.append(process)
+                for process in process_list:
+                    test_loss[p].reset_states()
+                    if test_accuracy!=None:
+                        test_accuracy[p].reset_states()
+                    process.join()
+                    
+                if test_accuracy!=None:
+                    self.test_loss,self.test_acc=np.sum(npc.as_array(self.shared_test_loss_array.get_obj()))/processes,np.sum(npc.as_array(self.shared_test_acc_array.get_obj()))/processes
+                else:
+                    self.test_loss=np.sum(npc.as_array(self.shared_test_loss_array.get_obj()))/processes
+                self.training(True)
         return
     
     
-    def train(self, train_ds, loss_object, train_loss, optimizer, epochs=None, train_accuracy=None, test_ds=None, test_loss=None, test_accuracy=None, processes=None, parallel_test=None, jit_compile=True, p=None):
+    def train(self, train_ds, loss_object, train_loss, optimizer, epochs=None, train_accuracy=None, test_ds=None, test_loss=None, test_accuracy=None, processes=None, parallel_test=None, jit_compile=True, callbacks=None, p=None):
         if p==None:
             p_=9
         else:
@@ -598,21 +599,38 @@ class Model:
         self.jit_compile=jit_compile
         self.p=p
         self.info_flag=0
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_begin'):
+                callback.on_train_begin(logs={})
         if epochs!=None:
             for epoch in range(epochs):
                 t1=time.time()
                 if self.steps_per_execution==None and self.end():
                     break
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_epoch_begin'):
+                        callback.on_epoch_begin(epoch, logs={})
                 train_loss.reset_states()
                 if train_accuracy!=None:
                     train_accuracy.reset_states()
             
+                batch = 0
                 for train_data, labels in train_ds:
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_begin'):
+                            callback.on_batch_begin(batch, logs={})
                     if jit_compile==True:
                         self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
                         self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
+                    batch_logs = {'loss': train_loss.result().numpy()}
+                    if train_accuracy != None:
+                        batch_logs['accuracy'] = train_accuracy.result().numpy()
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_end'):
+                            callback.on_batch_end(batch, logs=batch_logs)
                     self.batch_counter+=1
+                    batch += 1
                     if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
                         self.train_loss=train_loss.result().numpy()
                         if train_accuracy!=None:
@@ -629,6 +647,10 @@ class Model:
                         else:
                             self.save_param_(self.path)
                 
+                if test_ds!=None:
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_test_begin'):
+                            callback.on_test_begin(epoch, logs={})
                 self.test_(test_ds, loss_object, test_loss, test_accuracy, processes, mp, jit_compile)
                 self.test_loss_list.append(self.test_loss)
                 if test_accuracy!=None:
@@ -640,7 +662,20 @@ class Model:
                     self.train_acc=train_accuracy.result().numpy()
                     self.train_acc_list.append(self.train_acc)
                     
-                self.total_epoch+=1     
+                epoch_logs = {'loss': self.train_loss}
+                if train_accuracy != None:
+                    epoch_logs['accuracy'] = self.train_acc
+                if self.test_loss != None:
+                    epoch_logs['val_loss'] = self.test_loss
+                if test_accuracy != None:
+                    epoch_logs['val_accuracy'] = self.test_acc
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_epoch_end'):
+                        callback.on_epoch_end(epoch, logs=epoch_logs)
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_test_end'):
+                        callback.on_test_end(epoch, logs=epoch_logs)
+                self.total_epoch+=1   
                 if epoch%p==0:
                     if self.test_ds==None:
                         if train_accuracy!=None:
@@ -672,16 +707,30 @@ class Model:
                 t1=time.time()
                 if self.steps_per_execution==None and self.end():
                     break
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_epoch_begin'):
+                        callback.on_epoch_begin(i, logs={})
                 train_loss.reset_states()
                 if train_accuracy!=None:
                     train_accuracy.reset_states()
             
+                batch = 0
                 for train_data, labels in train_ds:
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_begin'):
+                            callback.on_batch_begin(batch, logs={})
                     if jit_compile==True:
                         self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
                         self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
+                    batch_logs = {'loss': train_loss.result().numpy()}
+                    if train_accuracy != None:
+                        batch_logs['accuracy'] = train_accuracy.result().numpy()
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_end'):
+                            callback.on_batch_end(batch, logs=batch_logs)
                     self.batch_counter+=1
+                    batch += 1
                     if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
                         self.train_loss=train_loss.result().numpy()
                         if train_accuracy!=None:
@@ -698,6 +747,10 @@ class Model:
                         else:
                             self.save_param_(self.path)
                 
+                if test_ds!=None:
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_test_begin'):
+                            callback.on_test_begin(i, logs={})
                 self.test_(test_ds, loss_object, test_loss, test_accuracy, processes, mp, jit_compile)
                 self.test_loss_list.append(self.test_loss)
                 if test_accuracy!=None:
@@ -709,6 +762,19 @@ class Model:
                     self.train_acc=train_accuracy.result().numpy()
                     self.train_acc_list.append(self.train_acc)
                 
+                epoch_logs = {'loss': self.train_loss}
+                if train_accuracy != None:
+                    epoch_logs['accuracy'] = self.train_acc
+                if self.test_loss != None:
+                    epoch_logs['val_loss'] = self.test_loss
+                if test_accuracy != None:
+                    epoch_logs['val_accuracy'] = self.test_acc
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_epoch_end'):
+                        callback.on_epoch_end(i, logs=epoch_logs)
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_test_end'):
+                        callback.on_test_end(i, logs=epoch_logs)
                 i+=1
                 self.total_epoch+=1
                 if i%p==0:
@@ -745,10 +811,13 @@ class Model:
             self.time=int(self.time)+1
         self.total_time+=self.time
         print('time:{0}s'.format(self.time))
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_end'):
+                callback.on_train_end(logs={})
         return
     
     
-    def distributed_training(self, train_dataset=None, loss_object=None, global_batch_size=None, optimizer=None, strategy=None, epochs=None, num_epochs=None, num_steps_per_epoch=None, train_accuracy=None, test_dataset=None, test_loss=None, test_accuracy=None, dataset_fn=None, test_dataset_fn=None, global_test_batch_size=None, eval_steps_per_epoch=None, jit_compile=True, p=None):
+    def distributed_training(self, train_dataset=None, loss_object=None, global_batch_size=None, optimizer=None, strategy=None, epochs=None, num_epochs=None, num_steps_per_epoch=None, train_accuracy=None, test_dataset=None, test_loss=None, test_accuracy=None, dataset_fn=None, test_dataset_fn=None, global_test_batch_size=None, eval_steps_per_epoch=None, jit_compile=True, callbacks=None, p=None):
         if num_epochs!=None:
             epochs=num_epochs
         if p==None:
@@ -782,15 +851,21 @@ class Model:
             def compute_loss(self, labels, output):
                 per_example_loss = loss_object(labels, output)
                 return tf.nn.compute_average_loss(per_example_loss, global_batch_size=global_batch_size)
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_begin'):
+                callback.on_train_begin(logs={})
         if isinstance(strategy,tf.distribute.MirroredStrategy):
             train_dist_dataset=strategy.experimental_distribute_dataset(train_dataset)
             if test_dataset!=None:
-                test_dist_dataset=strategy.experimental_distribute_dataset(test_dataset)        
+                test_dist_dataset=strategy.experimental_distribute_dataset(test_dataset)    
             if epochs!=None:
                 for epoch in range(epochs):
                     t1=time.time()
                     if self.steps_per_execution==None and self.end():
                         break
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_begin'):
+                            callback.on_epoch_begin(epoch, logs={})
                     if train_accuracy!=None:
                         train_accuracy.reset_states()
                     if test_loss!=None:
@@ -800,11 +875,22 @@ class Model:
                 
                     total_loss = 0.0
                     num_batches = 0
+                    batch = 0
                     for x in train_dist_dataset:
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_batch_begin'):
+                                callback.on_batch_begin(batch, logs={})
                         if jit_compile==True:
                             total_loss += self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
                         else:
                             total_loss += self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
+                        
+                        batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                        if train_accuracy != None:
+                            batch_logs['accuracy'] = train_accuracy.result().numpy()
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_batch_end'):
+                                callback.on_batch_end(batch, logs=batch_logs)
                         num_batches += 1
                         self.batch_counter+=1
                         if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
@@ -839,6 +925,9 @@ class Model:
                     if test_accuracy!=None:
                         test_accuracy.reset_states()
                     if test_dist_dataset!=None:
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_test_begin'):
+                                callback.on_test_begin(epoch, logs={})
                         self.training()
                         for x in test_dist_dataset:
                             if jit_compile==True:
@@ -858,7 +947,20 @@ class Model:
                     if train_accuracy!=None:
                         self.train_acc=train_accuracy.result().numpy()
                         self.train_acc_list.append(self.train_acc)
-                        
+                    
+                    epoch_logs = {'loss': self.train_loss}
+                    if train_accuracy != None:
+                        epoch_logs['accuracy'] = self.train_acc
+                    if self.test_loss != None:
+                        epoch_logs['val_loss'] = self.test_loss
+                    if test_accuracy != None:
+                        epoch_logs['val_accuracy'] = self.test_acc
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_end'):
+                            callback.on_epoch_end(epoch, logs=epoch_logs)
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_test_end'):
+                            callback.on_test_end(epoch, logs=epoch_logs)
                     self.total_epoch+=1     
                     if epoch%p==0:
                         if self.test_ds==None:
@@ -891,6 +993,9 @@ class Model:
                     t1=time.time()
                     if self.steps_per_execution==None and self.end():
                         break
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_begin'):
+                            callback.on_epoch_begin(epoch, logs={})
                     if train_accuracy!=None:
                         train_accuracy.reset_states()
                     if test_loss!=None:
@@ -900,13 +1005,24 @@ class Model:
                 
                     total_loss = 0.0
                     num_batches = 0
+                    batch = 0
                     for x in train_dist_dataset:
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_batch_begin'):
+                                callback.on_batch_begin(batch, logs={})
                         if jit_compile==True:
                             total_loss += self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
                         else:
                             total_loss += self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
+                        batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                        if train_accuracy != None:
+                            batch_logs['accuracy'] = train_accuracy.result().numpy()
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_batch_end'):
+                                callback.on_batch_end(batch, logs=batch_logs)
                         num_batches += 1
                         self.batch_counter+=1
+                        batch +=1
                         if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
                             self.train_loss=(total_loss / num_batches).numpy()
                             if train_accuracy!=None:
@@ -939,6 +1055,9 @@ class Model:
                     if test_accuracy!=None:
                         test_accuracy.reset_states()
                     if test_dist_dataset!=None:
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_test_begin'):
+                                callback.on_test_begin(epoch, logs={})
                         self.training()
                         for x in test_dist_dataset:
                             if jit_compile==True:
@@ -959,6 +1078,19 @@ class Model:
                         self.train_acc=train_accuracy.result().numpy()
                         self.train_acc_list.append(self.train_acc)
                     
+                    epoch_logs = {'loss': self.train_loss}
+                    if train_accuracy != None:
+                        epoch_logs['accuracy'] = self.train_acc
+                    if self.test_loss != None:
+                        epoch_logs['val_loss'] = self.test_loss
+                    if test_accuracy != None:
+                        epoch_logs['val_accuracy'] = self.test_acc
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_end'):
+                            callback.on_epoch_end(i, logs=epoch_logs)
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_test_end'):
+                            callback.on_test_end(i, logs=epoch_logs)
                     i+=1
                     self.total_epoch+=1
                     if i%p==0:
@@ -1003,8 +1135,15 @@ class Model:
                     if self.steps_per_execution==None and self.end():
                         break
                     
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_begin'):
+                            callback.on_epoch_begin(epoch, logs={})
+                    
                     train_loss=self.CTL(multi_worker_dataset, num_steps_per_epoch, train_accuracy, strategy, jit_compile)
                     if test_dataset!=None:
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_test_begin'):
+                                callback.on_test_begin(epoch, logs={})
                         self.training()
                         iterator = iter(multi_worker_test_dataset)
                         for _ in math.ceil(len(test_dataset)/global_test_batch_size):
@@ -1024,6 +1163,19 @@ class Model:
                     self.train_acc=train_accuracy.result().numpy()
                     self.train_acc_list.append(self.train_acc)
                         
+                    epoch_logs = {'loss': self.train_loss}
+                    if train_accuracy != None:
+                        epoch_logs['accuracy'] = self.train_acc
+                    if self.test_loss != None:
+                        epoch_logs['val_loss'] = self.test_loss
+                    if test_accuracy != None:
+                        epoch_logs['val_accuracy'] = self.test_acc
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_end'):
+                            callback.on_epoch_end(epoch, logs=epoch_logs)
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_test_end'):
+                            callback.on_test_end(epoch, logs=epoch_logs)
                     self.total_epoch+=1     
                     if epoch%p==0:
                         if self.test_ds==None:
@@ -1076,8 +1228,15 @@ class Model:
                     if self.steps_per_execution==None and self.end():
                         break
                     
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_begin'):
+                            callback.on_epoch_begin(epoch, logs={})
+                    
                     train_loss=self.CTL(multi_worker_dataset, num_steps_per_epoch, train_accuracy, strategy, jit_compile)
                     if test_dataset!=None:
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_test_begin'):
+                                callback.on_test_begin(epoch, logs={})
                         self.training()
                         iterator = iter(multi_worker_test_dataset)
                         for _ in math.ceil(len(test_dataset)/global_test_batch_size):
@@ -1096,7 +1255,20 @@ class Model:
                     self.train_loss_list.append(self.train_loss)
                     self.train_acc=train_accuracy.result().numpy()
                     self.train_acc_list.append(self.train_acc)
-                        
+                    
+                    epoch_logs = {'loss': self.train_loss}
+                    if train_accuracy != None:
+                        epoch_logs['accuracy'] = self.train_acc
+                    if self.test_loss != None:
+                        epoch_logs['val_loss'] = self.test_loss
+                    if test_accuracy != None:
+                        epoch_logs['val_accuracy'] = self.test_acc
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_end'):
+                            callback.on_epoch_end(epoch, logs=epoch_logs)
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_test_end'):
+                            callback.on_test_end(epoch, logs=epoch_logs)
                     self.total_epoch+=1     
                     if epoch%p==0:
                         if self.test_ds==None:
@@ -1147,8 +1319,15 @@ class Model:
                     if self.steps_per_execution==None and self.end():
                         break
                     
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_begin'):
+                            callback.on_epoch_begin(epoch, logs={})
+                    
                     train_loss=self.CTL_param(coordinator, num_steps_per_epoch, train_accuracy, strategy, jit_compile)
                     if eval_steps_per_epoch!=None:
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_test_begin'):
+                                callback.on_test_begin(epoch, logs={})
                         self.training()
                         if jit_compile==True:
                             per_worker_dataset = coordinator.create_per_worker_dataset(self.per_worker_test_dataset_fn)
@@ -1173,6 +1352,19 @@ class Model:
                     self.train_acc=train_accuracy.result().numpy()
                     self.train_acc_list.append(self.train_acc)
                         
+                    epoch_logs = {'loss': self.train_loss}
+                    if train_accuracy != None:
+                        epoch_logs['accuracy'] = self.train_acc
+                    if self.test_loss != None:
+                        epoch_logs['val_loss'] = self.test_loss
+                    if test_accuracy != None:
+                        epoch_logs['val_accuracy'] = self.test_acc
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_epoch_end'):
+                            callback.on_epoch_end(epoch, logs=epoch_logs)
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_test_end'):
+                            callback.on_test_end(epoch, logs=epoch_logs)
                     self.total_epoch+=1     
                     if epoch%p==0:
                         if self.test_ds==None:
@@ -1223,8 +1415,15 @@ class Model:
                         if self.steps_per_execution==None and self.end():
                             break
                         
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_epoch_begin'):
+                                callback.on_epoch_begin(epoch, logs={})
+                        
                         train_loss=self.CTL_param(coordinator, num_steps_per_epoch, train_accuracy, strategy, jit_compile)
                         if eval_steps_per_epoch!=None:
+                            for callback in self.callbacks:
+                                if hasattr(callback, 'on_test_begin'):
+                                    callback.on_test_begin(epoch, logs={})
                             self.training()
                             if jit_compile==True:
                                 per_worker_dataset = coordinator.create_per_worker_dataset(self.per_worker_test_dataset_fn)
@@ -1249,6 +1448,19 @@ class Model:
                         self.train_acc=train_accuracy.result().numpy()
                         self.train_acc_list.append(self.train_acc)
                             
+                        epoch_logs = {'loss': self.train_loss}
+                        if train_accuracy != None:
+                            epoch_logs['accuracy'] = self.train_acc
+                        if self.test_loss != None:
+                            epoch_logs['val_loss'] = self.test_loss
+                        if test_accuracy != None:
+                            epoch_logs['val_accuracy'] = self.test_acc
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_epoch_end'):
+                                callback.on_epoch_end(epoch, logs=epoch_logs)
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_test_end'):
+                                callback.on_test_end(epoch, logs=epoch_logs)
                         self.total_epoch+=1     
                         if epoch%p==0:
                             if self.test_ds==None:
@@ -1292,6 +1504,9 @@ class Model:
             self.time=int(self.time)+1
         self.total_time+=self.time
         print('time:{0}s'.format(self.time))
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_end'):
+                callback.on_train_end(logs={})
         return
     
     
@@ -1307,15 +1522,26 @@ class Model:
         iterator = iter(multi_worker_dataset)
         total_loss = 0.0
         num_batches = 0
+        batch = 0
         
         while self.step_in_epoch < num_steps_per_epoch:
+            for callback in self.callbacks:
+                if hasattr(callback, 'on_batch_begin'):
+                    callback.on_batch_begin(batch, logs={})
             if jit_compile==True:
                 total_loss += self.distributed_train_step(next(iterator), self.optimizer, train_accuracy, strategy)
             else:
                 total_loss += self.distributed_train_step_(next(iterator), self.optimizer, train_accuracy, strategy)
+            batch_logs = {'loss': (total_loss / num_batches).numpy()}
+            if train_accuracy != None:
+                batch_logs['accuracy'] = train_accuracy.result().numpy()
+            for callback in self.callbacks:
+                if hasattr(callback, 'on_batch_end'):
+                    callback.on_batch_end(batch, logs=batch_logs)
             num_batches += 1
             self.step_in_epoch += 1
             self.batch_counter += 1
+            batch += 1
             if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
                 self.train_loss = total_loss / num_batches
                 if self.end():
@@ -1361,15 +1587,26 @@ class Model:
         per_worker_iterator = iter(per_worker_dataset)
         total_loss = 0.0
         num_batches = 0
+        batch = 0
         
         while self.step_in_epoch < num_steps_per_epoch:
+            for callback in self.callbacks:
+                if hasattr(callback, 'on_batch_begin'):
+                    callback.on_batch_begin(batch, logs={})
             if jit_compile==True:
                 total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
             else:
                 total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
+            batch_logs = {'loss': (total_loss / num_batches).numpy()}
+            if train_accuracy != None:
+                batch_logs['accuracy'] = train_accuracy.result().numpy()
+            for callback in self.callbacks:
+                if hasattr(callback, 'on_batch_end'):
+                    callback.on_batch_end(batch, logs=batch_logs)
             num_batches += 1
             self.step_in_epoch += 1
             self.batch_counter += 1
+            batch += 1
             if self.steps_per_execution!=None and self.batch_counter%self.steps_per_execution==0:
                 self.train_loss=total_loss.fetch() / num_batches
                 if self.end():
