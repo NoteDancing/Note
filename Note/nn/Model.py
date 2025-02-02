@@ -57,6 +57,7 @@ class Model:
         self.save_best_only=False
         self.save_param_only=False
         self.callbacks=[]
+        self.stop_training=False
         self.info=dict()
         self.batch_counter=0
         self.path_list=[]
@@ -562,7 +563,7 @@ class Model:
         return
     
     
-    def train(self, train_ds, loss_object, train_loss, optimizer, epochs=None, train_accuracy=None, test_ds=None, test_loss=None, test_accuracy=None, processes=None, parallel_test=None, jit_compile=True, callbacks=None, p=None):
+    def train(self, train_ds, loss_object, train_loss, optimizer=None, epochs=None, train_accuracy=None, test_ds=None, test_loss=None, test_accuracy=None, processes=None, parallel_test=None, jit_compile=True, callbacks=None, p=None):
         if p==None:
             p_=9
         else:
@@ -585,7 +586,8 @@ class Model:
             self.batch_size=None
         self.loss_object=loss_object
         self.train_loss=train_loss
-        self.optimizer=optimizer
+        if self.optimizer==None:
+            self.optimizer=optimizer
         self.epochs=epochs
         self.train_accuracy=train_accuracy
         self.test_loss=test_loss
@@ -605,6 +607,8 @@ class Model:
         if epochs!=None:
             for epoch in range(epochs):
                 t1=time.time()
+                if self.stop_training==True:
+                    return
                 if self.steps_per_execution==None and self.end():
                     break
                 for callback in self.callbacks:
@@ -616,6 +620,8 @@ class Model:
             
                 batch = 0
                 for train_data, labels in train_ds:
+                    if self.stop_training==True:
+                        return
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_begin'):
                             callback.on_batch_begin(batch, logs={})
@@ -705,6 +711,8 @@ class Model:
             i=0
             while True:
                 t1=time.time()
+                if self.stop_training==True:
+                    return
                 if self.steps_per_execution==None and self.end():
                     break
                 for callback in self.callbacks:
@@ -716,6 +724,8 @@ class Model:
             
                 batch = 0
                 for train_data, labels in train_ds:
+                    if self.stop_training==True:
+                        return
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_begin'):
                             callback.on_batch_begin(batch, logs={})
@@ -834,7 +844,8 @@ class Model:
             p=1
         self.loss_object=loss_object
         self.global_batch_size=global_batch_size
-        self.optimizer=optimizer
+        if self.optimizer==None:
+            self.optimizer=optimizer
         self.strategy=strategy
         self.epochs=epochs
         self.num_epochs=num_epochs
@@ -861,6 +872,8 @@ class Model:
             if epochs!=None:
                 for epoch in range(epochs):
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
                     if self.steps_per_execution==None and self.end():
                         break
                     for callback in self.callbacks:
@@ -877,6 +890,8 @@ class Model:
                     num_batches = 0
                     batch = 0
                     for x in train_dist_dataset:
+                        if self.stop_training==True:
+                            return
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_begin'):
                                 callback.on_batch_begin(batch, logs={})
@@ -991,6 +1006,8 @@ class Model:
                 i=0
                 while True:
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
                     if self.steps_per_execution==None and self.end():
                         break
                     for callback in self.callbacks:
@@ -1007,6 +1024,8 @@ class Model:
                     num_batches = 0
                     batch = 0
                     for x in train_dist_dataset:
+                        if self.stop_training==True:
+                            return
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_begin'):
                                 callback.on_batch_begin(batch, logs={})
@@ -1132,6 +1151,9 @@ class Model:
                 while epoch < num_epochs:
                     t1=time.time()
                     
+                    if self.stop_training==True:
+                        return
+                    
                     if self.steps_per_execution==None and self.end():
                         break
                     
@@ -1225,6 +1247,9 @@ class Model:
                 while True:
                     t1=time.time()
                     
+                    if self.stop_training==True:
+                        return
+                    
                     if self.steps_per_execution==None and self.end():
                         break
                     
@@ -1315,6 +1340,9 @@ class Model:
                 self.step_in_epoch = 0
                 while epoch < num_epochs:
                     t1=time.time()
+                    
+                    if self.stop_training==True:
+                        return
                     
                     if self.steps_per_execution==None and self.end():
                         break
@@ -1411,6 +1439,9 @@ class Model:
                     self.step_in_epoch = 0
                     while True:
                         t1=time.time()
+                        
+                        if self.stop_training==True:
+                            return
                         
                         if self.steps_per_execution==None and self.end():
                             break
