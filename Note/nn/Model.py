@@ -1585,6 +1585,8 @@ class Model:
                     self.save_(self.path)
                 else:
                     self.save_param_(self.path)
+            if self.stop_training==True:
+                return total_loss / num_batches
       
         train_loss = total_loss / num_batches
         return train_loss
@@ -1650,6 +1652,9 @@ class Model:
                     self.save_(self.path)
                 else:
                     self.save_param_(self.path)
+            if self.stop_training==True:
+                coordinator.join()
+                return total_loss.fetch() / num_batches
         coordinator.join()
       
         train_loss = total_loss.fetch() / num_batches
