@@ -42,9 +42,12 @@ class LRFinder:
 
         # Increase the learning rate for the next batch
         lr *= self.lr_mult
-        K.set_value(self.model.optimizer.lr, lr)
+        if type(self.model.optimizer)!=list:
+            K.set_value(self.model.optimizer.lr, lr)
+        else:
+            K.set_value(self.model.optimizer[-1].lr, lr)
 
-    def find(self, N=None, train_ds=None, loss_object=None, train_loss=None, global_batch_size=None, dataset_fn=None, num_epochs=None, num_steps_per_epoch=None, strategy=None, start_lr=None, end_lr=None, batch_size=64, epochs=1, **kw_fit):
+    def find(self, N=None, train_ds=None, loss_object=None, train_loss=None, strategy=None, start_lr=None, end_lr=None, batch_size=64, epochs=1, **kw_fit):
         # Compute number of batches and LR multiplier
         num_batches = epochs * N / batch_size
         self.lr_mult = (float(end_lr) / float(start_lr)) ** (float(1) / float(num_batches))
@@ -52,10 +55,16 @@ class LRFinder:
         initial_weights = [tf.Variable(param.read_value()) for param in nest.flatten(self.model.param)]
 
         # Remember the original learning rate
-        original_lr = K.get_value(self.model.optimizer.lr)
+        if type(self.model.optimizer)!=list:
+            original_lr = K.get_value(self.model.optimizer.lr)
+        else:
+            original_lr = K.get_value(self.model.optimizer[-1].lr)
 
         # Set the initial learning rate
-        K.set_value(self.model.optimizer.lr, start_lr)
+        if type(self.model.optimizer)!=list:
+            K.set_value(self.model.optimizer.lr, start_lr)
+        else:
+            K.set_value(self.model.optimizer[-1].lr, start_lr)
 
         callback = nn.LambdaCallback(on_batch_end=lambda batch, logs: self.on_batch_end(batch, logs))
 
@@ -67,37 +76,22 @@ class LRFinder:
                            callbacks=[callback],
                            **kw_fit)
         else:
-            if isinstance(strategy,tf.distribute.MirroredStrategy):
-                self.model.distributed_training(train_dataset=train_ds,
-                               loss_object=loss_object, 
-                               global_batch_size=global_batch_size, 
-                               epochs=epochs,
-                               strategy=strategy,
-                               callbacks=[callback],
-                               **kw_fit)
-            elif isinstance(strategy,tf.distribute.MultiWorkerMirroredStrategy):
-                self.model.distributed_training(train_dataset=train_ds,
-                               loss_object=loss_object, 
-                               global_batch_size=global_batch_size, 
-                               num_epochs=num_epochs, 
-                               num_steps_per_epoch=num_steps_per_epoch,
-                               strategy=strategy,
-                               callbacks=[callback],
-                               **kw_fit)
-            elif isinstance(strategy,tf.distribute.ParameterServerStrategy):
-                self.model.distributed_training(dataset_fn=dataset_fn,
-                               loss_object=loss_object, 
-                               num_epochs=num_epochs, 
-                               num_steps_per_epoch=num_steps_per_epoch,
-                               strategy=strategy,
-                               callbacks=[callback],
-                               **kw_fit)
+            self.model.distributed_training(train_dataset=train_ds,
+                           loss_object=loss_object, 
+                           global_batch_size=batch_size, 
+                           epochs=epochs,
+                           strategy=strategy,
+                           callbacks=[callback],
+                           **kw_fit)
 
         # Restore the weights to the state before model fitting
         nn.assign_param(self.model.param, initial_weights)
 
         # Restore the original learning rate
-        K.set_value(self.model.optimizer.lr, original_lr)
+        if type(self.model.optimizer)!=list:
+            K.set_value(self.model.optimizer.lr, original_lr)
+        else:
+            K.set_value(self.model.optimizer[-1].lr, original_lr)
 
     def plot_loss(self, n_skip_beginning=10, n_skip_end=5, x_scale='log'):
         """
@@ -131,6 +125,202 @@ class LRFinder:
         plt.show()
 
     def get_derivatives(self, sma):
+        assert sma >= 1
+        derivatives = [0] * sma
+        for i in range(sma, len(self.lrs)):
+            derivatives.append((self.losses[i] - self.losses[i - sma]) / sma)
+        return derivatives
+
+    def get_best_lr(self, sma, n_skip_beginning=10, n_skip_end=5):
+        derivatives = self.get_derivatives(sma)
+        best_der_idx = np.argmin(derivatives[n_skip_beginning:-n_skip_end])
+        return self.lrs[n_skip_beginning:-n_skip_end][best_der_idx]
+
+
+class LRFinder_rl:
+    """
+    Plots the change of the loss function of a Keras model when the learning rate is exponentially increasing.
+    See for details:
+    https://towardsdatascience.com/estimating-optimal-learning-rate-for-a-deep-neural-network-ce32f2556ce0
+    """
+
+    def __init__(self, agent):
+        self.agent = agent
+        self.losses = []
+        self.lrs = []
+        self.best_loss = 1e9
+        self.best_reward = -1e9
+            
+    def on_episode_end(self, episode, logs):
+        if type(self.agent.optimizer)!=list:
+            lr = K.get_value(self.agent.optimizer.lr)
+        else:
+            lr = K.get_value(self.agent.optimizer[-1].lr)
+        self.lrs.append(lr)
+        reward = logs['reward']
+        self.rewards.append(reward)
+
+        if episode > 5 and (math.isnan(reward) or reward < self.best_reward * 0.5):
+            self.stop_training = True
+            return
+
+        if reward > self.best_reward:
+            self.best_reward = reward
+
+        lr *= self.lr_mult
+        if type(self.agent.optimizer)!=list:
+            K.set_value(self.model.optimizer.lr, lr)
+        else:
+            K.set_value(self.model.optimizer[-1].lr, lr)
+    
+    def on_episode_end_loss(self, episode, logs):
+        # Log the learning rate
+        if type(self.agent.optimizer)!=list:
+            lr = K.get_value(self.agent.optimizer.lr)
+        else:
+            lr = K.get_value(self.agent.optimizer[-1].lr)
+        self.lrs.append(lr)
+
+        # Log the loss
+        loss = logs['loss']
+        self.losses.append(loss)
+
+        # Check whether the loss got too large or NaN
+        if episode > 5 and (math.isnan(loss) or loss > self.best_loss * 4):
+            self.agent.stop_training = True
+            return
+
+        if loss < self.best_loss:
+            self.best_loss = loss
+
+        # Increase the learning rate for the next batch
+        lr *= self.lr_mult
+        if type(self.agent.optimizer)!=list:
+            K.set_value(self.model.optimizer.lr, lr)
+        else:
+            K.set_value(self.model.optimizer[-1].lr, lr)
+
+    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, start_lr=None, end_lr=None, episodes=1, metrics='reward', **kw_fit):
+        # Compute number of batches and LR multiplier
+        self.lr_mult = (float(end_lr) / float(start_lr)) ** (float(1) / float(episodes))
+        # Save weights into a file
+        initial_weights = [tf.Variable(param.read_value()) for param in nest.flatten(self.model.param)]
+
+        # Remember the original learning rate
+        if type(self.agent.optimizer)!=list:
+            original_lr = K.get_value(self.agent.optimizer.lr)
+        else:
+            original_lr = K.get_value(self.agent.optimizer[-1].lr)
+
+        # Set the initial learning rate
+        if type(self.agent.optimizer)!=list:
+            K.set_value(self.agent.optimizer.lr, start_lr)
+        else:
+            K.set_value(self.agent.optimizer[-1].lr, start_lr)
+
+        if metrics == 'reward':
+            callback = nn.LambdaCallback(on_episode_end=lambda episode, logs: self.on_episode_end(episode, logs))
+        elif metrics == 'loss':
+            callback = nn.LambdaCallback(on_episode_end=lambda episode, logs: self.on_episode_end_loss(episode, logs))
+
+        if strategy == None:
+            self.model.train(train_loss=train_loss, 
+                           episodes=episodes,
+                           pool_network=pool_network,
+                           processes=processes,
+                           processes_her=processes_her,
+                           processes_pr=processes_her,
+                           callbacks=[callback],
+                           **kw_fit)
+        else:
+            self.model.distributed_training(strategy=strategy,
+                           episodes=episodes,
+                           pool_network=pool_network,
+                           processes=processes,
+                           processes_her=processes_her,
+                           processes_pr=processes_her,
+                           callbacks=[callback],
+                           **kw_fit)
+
+        # Restore the weights to the state before model fitting
+        nn.assign_param(self.agent.param, initial_weights)
+
+        # Restore the original learning rate
+        if type(self.agent.optimizer)!=list:
+            K.set_value(self.agent.optimizer.lr, original_lr)
+        else:
+            K.set_value(self.agent.optimizer[-1].lr, original_lr)
+    
+    def plot_reward(self, n_skip_beginning=10, n_skip_end=5, x_scale='log'):
+        """
+        Plots the reward.
+        Parameters:
+            n_skip_beginning - number of batches to skip on the left.
+            n_skip_end - number of batches to skip on the right.
+        """
+        plt.ylabel("reward")
+        plt.xlabel("learning rate (log scale)")
+        plt.plot(self.lrs[n_skip_beginning:-n_skip_end], self.rewards[n_skip_beginning:-n_skip_end])
+        plt.xscale(x_scale)
+        plt.show()
+
+    def plot_loss(self, n_skip_beginning=10, n_skip_end=5, x_scale='log'):
+        """
+        Plots the loss.
+        Parameters:
+            n_skip_beginning - number of batches to skip on the left.
+            n_skip_end - number of batches to skip on the right.
+        """
+        plt.ylabel("loss")
+        plt.xlabel("learning rate (log scale)")
+        plt.plot(self.lrs[n_skip_beginning:-n_skip_end], self.losses[n_skip_beginning:-n_skip_end])
+        plt.xscale(x_scale)
+        plt.show()
+    
+    def plot_reward_change(self, sma=1, n_skip_beginning=10, n_skip_end=5, y_lim=(-0.01, 0.01)):
+        """
+        Plots rate of change of the reward.
+        Parameters:
+            sma - number of batches for simple moving average to smooth out the curve.
+            n_skip_beginning - number of batches to skip on the left.
+            n_skip_end - number of batches to skip on the right.
+            y_lim - limits for the y axis.
+        """
+        derivatives = self.get_derivatives(sma)[n_skip_beginning:-n_skip_end]
+        lrs = self.lrs[n_skip_beginning:-n_skip_end]
+        plt.ylabel("rate of reward change")
+        plt.xlabel("learning rate (log scale)")
+        plt.plot(lrs, derivatives)
+        plt.xscale('log')
+        plt.ylim(y_lim)
+        plt.show()
+
+    def plot_loss_change(self, sma=1, n_skip_beginning=10, n_skip_end=5, y_lim=(-0.01, 0.01)):
+        """
+        Plots rate of change of the loss function.
+        Parameters:
+            sma - number of batches for simple moving average to smooth out the curve.
+            n_skip_beginning - number of batches to skip on the left.
+            n_skip_end - number of batches to skip on the right.
+            y_lim - limits for the y axis.
+        """
+        derivatives = self.get_derivatives_loss(sma)[n_skip_beginning:-n_skip_end]
+        lrs = self.lrs[n_skip_beginning:-n_skip_end]
+        plt.ylabel("rate of loss change")
+        plt.xlabel("learning rate (log scale)")
+        plt.plot(lrs, derivatives)
+        plt.xscale('log')
+        plt.ylim(y_lim)
+        plt.show()
+    
+    def get_derivatives(self, sma):
+        assert sma >= 1
+        derivatives = [0] * sma
+        for i in range(sma, len(self.lrs)):
+            derivatives.append((self.rewards[i] - self.rewards[i - sma]) / sma)
+        return derivatives
+
+    def get_derivatives_loss(self, sma):
         assert sma >= 1
         derivatives = [0] * sma
         for i in range(sma, len(self.lrs)):
