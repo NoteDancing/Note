@@ -33,6 +33,8 @@ class RL:
         self.max_save_files=None
         self.save_best_only=False
         self.save_param_only=False
+        self.callbacks=[]
+        self.stop_training=False
         self.info=dict()
         self.path_list=[]
         self.loss=None
@@ -388,23 +390,37 @@ class RL:
                         self.done_pool=None
             return total_loss
         else:
+            batch = 0
             while self.step_in_epoch < num_steps_per_episode:
-              if self.jit_compile==True:
-                  total_loss += self.distributed_train_step(next(iterator), self.optimizer)
-              else:
-                  total_loss += self.distributed_train_step_(next(iterator), self.optimizer)
-              num_batches += 1
-              self.batch_counter += 1
-              self.step_in_episode += 1
-              if self.pool_network==True:
-                  if self.batch_counter%self.update_batches==0:
-                      self.update_param()
-                      if self.PPO:
-                          self.state_pool=None
-                          self.action_pool=None
-                          self.next_state_pool=None
-                          self.reward_pool=None
-                          self.done_pool=None
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_batch_begin'):
+                        callback.on_batch_begin(batch, logs={})
+                if self.jit_compile==True:
+                    total_loss += self.distributed_train_step(next(iterator), self.optimizer)
+                else:
+                    total_loss += self.distributed_train_step_(next(iterator), self.optimizer)
+                if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                    batch_logs = {'loss': total_loss.fetch() / num_batches}
+                else:
+                    batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_batch_end'):
+                        callback.on_batch_end(batch, logs=batch_logs)
+                num_batches += 1
+                self.batch_counter += 1
+                self.step_in_episode += 1
+                batch += 1
+                if self.pool_network==True:
+                    if self.batch_counter%self.update_batches==0:
+                        self.update_param()
+                        if self.PPO:
+                            self.state_pool=None
+                            self.action_pool=None
+                            self.next_state_pool=None
+                            self.reward_pool=None
+                            self.done_pool=None
+                if self.stop_training==True:
+                    return total_loss,num_batches
             return total_loss,num_batches
     
     
@@ -445,23 +461,38 @@ class RL:
                         self.done_pool=None
             return total_loss
         else:
+            batch = 0
             while self.step_in_epoch < num_steps_per_episode:
-              if self.jit_compile==True:
-                  total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer))
-              else:
-                  total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer))
-              num_batches += 1
-              self.batch_counter += 1
-              self.step_in_episode += 1
-              if self.pool_network==True:
-                  if self.batch_counter%self.update_batches==0:
-                      self.update_param()
-                      if self.PPO:
-                          self.state_pool=None
-                          self.action_pool=None
-                          self.next_state_pool=None
-                          self.reward_pool=None
-                          self.done_pool=None
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_batch_begin'):
+                        callback.on_batch_begin(batch, logs={})
+                if self.jit_compile==True:
+                    total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer))
+                else:
+                    total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer))
+                if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                    batch_logs = {'loss': total_loss.fetch() / num_batches}
+                else:
+                    batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_batch_end'):
+                        callback.on_batch_end(batch, logs=batch_logs)
+                num_batches += 1
+                self.batch_counter += 1
+                self.step_in_episode += 1
+                batch += 1
+                if self.pool_network==True:
+                    if self.batch_counter%self.update_batches==0:
+                        self.update_param()
+                        if self.PPO:
+                            self.state_pool=None
+                            self.action_pool=None
+                            self.next_state_pool=None
+                            self.reward_pool=None
+                            self.done_pool=None
+                if self.stop_training==True:
+                    coordinator.join()
+                    return total_loss,num_batches
             coordinator.join()
             return total_loss,num_batches
     
@@ -483,7 +514,18 @@ class RL:
             if self.PR==True or self.HER==True:
                 total_loss = 0.0
                 num_batches = 0
+                batch = 0
                 for j in range(batches):
+                    if self.stop_training==True:
+                        if self.distributed_flag==True:
+                            if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                                self.coordinator.join()
+                            return np.array(0.)
+                        else:
+                            return train_loss.result().numpy()
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_begin'):
+                            callback.on_batch_begin(batch, logs={})
                     state_batch,action_batch,next_state_batch,reward_batch,done_batch=self.data_func()
                     train_ds=tf.data.Dataset.from_tensor_slices((state_batch,action_batch,next_state_batch,reward_batch,done_batch)).batch(self.global_batch_size)
                     if isinstance(self.strategy,tf.distribute.MirroredStrategy):
@@ -529,7 +571,28 @@ class RL:
                                         self.next_state_pool=None
                                         self.reward_pool=None
                                         self.done_pool=None
+                    if self.distributed_flag==True:
+                        if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                            batch_logs = {'loss': total_loss.fetch() / num_batches}
+                        else:
+                            batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                    else:
+                        batch_logs = {'loss': train_loss.result().numpy()}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_end'):
+                            callback.on_batch_end(batch, logs=batch_logs)
+                    batch += 1
                 if len(self.state_pool)%self.batch!=0:
+                    if self.stop_training==True:
+                        if self.distributed_flag==True:
+                            if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                                self.coordinator.join()
+                            return np.array(0.)
+                        else:
+                            return train_loss.result().numpy() 
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_begin'):
+                            callback.on_batch_begin(batch, logs={})
                     state_batch,action_batch,next_state_batch,reward_batch,done_batch=self.data_func()
                     train_ds=tf.data.Dataset.from_tensor_slices((state_batch,action_batch,next_state_batch,reward_batch,done_batch)).batch(self.global_batch_size)
                     if isinstance(self.strategy,tf.distribute.MirroredStrategy):
@@ -574,9 +637,20 @@ class RL:
                                     self.next_state_pool=None
                                     self.reward_pool=None
                                     self.done_pool=None
+                    if self.distributed_flag==True:
+                        if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                            batch_logs = {'loss': total_loss.fetch() / num_batches}
+                        else:
+                            batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                    else:
+                        batch_logs = {'loss': train_loss.result().numpy()}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_batch_end'):
+                            callback.on_batch_end(batch, logs=batch_logs)
                 if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
                     self.coordinator.join()
             else:
+                batch = 0
                 if self.distributed_flag==True:
                     total_loss = 0.0
                     num_batches = 0
@@ -590,12 +664,30 @@ class RL:
                     if isinstance(self.strategy,tf.distribute.MirroredStrategy):
                         train_ds=self.strategy.experimental_distribute_dataset(train_ds)
                         for state_batch,action_batch,next_state_batch,reward_batch,done_batch in train_ds:
+                            if self.stop_training==True:
+                                if self.distributed_flag==True:
+                                    if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                                        self.coordinator.join()
+                                    return np.array(0.)
+                                else:
+                                    return train_loss.result().numpy() 
+                            for callback in self.callbacks:
+                                if hasattr(callback, 'on_batch_begin'):
+                                    callback.on_batch_begin(batch, logs={})
                             if self.jit_compile==True:
                                 total_loss+=self.distributed_train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
                             else:
                                 total_loss+=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                            if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
+                                batch_logs = {'loss': total_loss.fetch() / num_batches}
+                            else:
+                                batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                            for callback in self.callbacks:
+                                if hasattr(callback, 'on_batch_end'):
+                                    callback.on_batch_end(batch, logs=batch_logs)
                             num_batches += 1
                             self.batch_counter += 1
+                            batch += 1
                             if self.pool_network==True:
                                 if self.batch_counter%self.update_batches==0:
                                     self.update_param()
@@ -621,12 +713,22 @@ class RL:
                     else:
                         train_ds=tf.data.Dataset.from_tensor_slices((self.state_pool,self.action_pool,self.next_state_pool,self.reward_pool,self.done_pool)).shuffle(len(self.state_pool)).batch(self.batch)
                     for state_batch,action_batch,next_state_batch,reward_batch,done_batch in train_ds:
+                        if self.stop_training==True:
+                            return train_loss.result().numpy() 
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_batch_begin'):
+                                callback.on_batch_begin(batch, logs={})
                         if self.jit_compile==True:
                             self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
                         else:
                             self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
+                        batch_logs = {'loss': train_loss.result().numpy()}
+                        for callback in self.callbacks:
+                            if hasattr(callback, 'on_batch_end'):
+                                callback.on_batch_end(batch, logs=batch_logs)
                         num_batches += 1
                         self.batch_counter += 1
+                        batch += 1
                         if self.pool_network==True:
                             if self.batch_counter%self.update_batches==0:
                                 self.update_param()
@@ -807,7 +909,7 @@ class RL:
             s=next_s
     
     
-    def train(self, train_loss, optimizer, episodes=None, jit_compile=True, pool_network=True, processes=None, processes_her=None, processes_pr=None, shuffle=False, p=None):
+    def train(self, train_loss, optimizer, episodes=None, jit_compile=True, pool_network=True, processes=None, processes_her=None, processes_pr=None, callbacks=None, shuffle=False, p=None):
         avg_reward=None
         if p==None:
             self.p=9
@@ -885,9 +987,17 @@ class RL:
                         self.reward_list.append(None)
                         self.done_list.append(None)
         self.distributed_flag=False
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_begin'):
+                callback.on_train_begin(logs={})
         if episodes!=None:
             for i in range(episodes):
                 t1=time.time()
+                if self.stop_training==True:
+                    return
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_episode_begin'):
+                        callback.on_epoch_begin(i, logs={})
                 train_loss.reset_states()
                 if pool_network==True:
                     process_list=[]
@@ -918,6 +1028,11 @@ class RL:
                     loss=self.train1(train_loss, self.optimizer)
                 else:
                     loss=self.train2(train_loss,self.optimizer)
+                episode_logs = {'loss': loss}
+                episode_logs = {'reward': self.reward_list[-1]}
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_episode_end'):
+                        callback.on_epoch_end(i, logs=episode_logs)
                 self.loss=loss
                 self.loss_list.append(loss)
                 self.total_episode+=1
@@ -956,6 +1071,11 @@ class RL:
             i=0
             while True:
                 t1=time.time()
+                if self.stop_training==True:
+                    return
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_episode_begin'):
+                        callback.on_epoch_begin(i, logs={})
                 train_loss.reset_states()
                 if pool_network==True:
                     process_list=[]
@@ -986,6 +1106,11 @@ class RL:
                     loss=self.train1(train_loss, self.optimizer)
                 else:
                     loss=self.train2(train_loss,self.optimizer)
+                episode_logs = {'loss': loss}
+                episode_logs = {'reward': self.reward_list[-1]}
+                for callback in self.callbacks:
+                    if hasattr(callback, 'on_episode_end'):
+                        callback.on_epoch_end(i, logs=episode_logs)
                 self.loss=loss
                 self.loss_list.append(loss)
                 i+=1
@@ -1028,10 +1153,13 @@ class RL:
             self.total_time=int(self.time)+1
         self.total_time+=self.time
         print('time:{0}s'.format(self.time))
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_end'):
+                callback.on_train_end(logs={})
         return
     
     
-    def distributed_training(self, optimizer, strategy, episodes=None, num_episodes=None, jit_compile=True, pool_network=True, processes=None, processes_her=None, processes_pr=None, shuffle=False, p=None):
+    def distributed_training(self, optimizer, strategy, episodes=None, num_episodes=None, jit_compile=True, pool_network=True, processes=None, processes_her=None, processes_pr=None, callbacks=None, shuffle=False, p=None):
         avg_reward=None
         if num_episodes!=None:
             episodes=num_episodes
@@ -1115,10 +1243,18 @@ class RL:
         with strategy.scope():
             def compute_loss(self, per_example_loss):
                 return tf.nn.compute_average_loss(per_example_loss, global_batch_size=self.batch)
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_begin'):
+                callback.on_train_begin(logs={})
         if isinstance(strategy,tf.distribute.MirroredStrategy):
             if episodes!=None:
                 for i in range(episodes):
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_begin'):
+                            callback.on_epoch_begin(i, logs={})
                     if pool_network==True:
                         process_list=[]
                         self.modify_TD()
@@ -1148,6 +1284,11 @@ class RL:
                         loss=self.train1(None, self.optimizer)
                     else:
                         loss=self.train2(None,self.optimizer)
+                    episode_logs = {'loss': loss}
+                    episode_logs = {'reward': self.reward_list[-1]}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_end'):
+                            callback.on_epoch_end(i, logs=episode_logs)
                     self.loss=loss
                     self.loss_list.append(loss)
                     self.total_episode+=1
@@ -1186,6 +1327,11 @@ class RL:
                 i=0
                 while True:
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_begin'):
+                            callback.on_epoch_begin(i, logs={})
                     if pool_network==True:
                         process_list=[]
                         self.modify_TD()
@@ -1215,6 +1361,11 @@ class RL:
                         loss=self.train1(None, self.optimizer)
                     else:
                         loss=self.train2(None,self.optimizer)
+                    episode_logs = {'loss': loss}
+                    episode_logs = {'reward': self.reward_list[-1]}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_end'):
+                            callback.on_epoch_end(i, logs=episode_logs)
                     self.loss=loss
                     self.loss_list.append(loss)
                     i+=1
@@ -1256,6 +1407,11 @@ class RL:
                 self.step_in_episode = 0
                 while episode < num_episodes:
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_begin'):
+                            callback.on_epoch_begin(i, logs={})
                     if pool_network==True:
                         process_list=[]
                         self.modify_TD()
@@ -1295,6 +1451,11 @@ class RL:
                     episode += 1
                     self.step_in_episode = 0
                     
+                    episode_logs = {'loss': loss}
+                    episode_logs = {'reward': self.reward_list[-1]}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_end'):
+                            callback.on_epoch_end(i, logs=episode_logs)
                     self.loss=loss
                     self.loss_list.append(loss)
                     self.total_episode+=1
@@ -1329,6 +1490,11 @@ class RL:
                 self.step_in_episode = 0
                 while True:
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_begin'):
+                            callback.on_epoch_begin(i, logs={})
                     if pool_network==True:
                         process_list=[]
                         self.modify_TD()
@@ -1368,6 +1534,11 @@ class RL:
                     episode += 1
                     self.step_in_episode = 0
                     
+                    episode_logs = {'loss': loss}
+                    episode_logs = {'reward': self.reward_list[-1]}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_end'):
+                            callback.on_epoch_end(i, logs=episode_logs)
                     self.loss=loss
                     self.loss_list.append(loss)
                     self.total_episode+=1
@@ -1404,6 +1575,11 @@ class RL:
                 self.step_in_episode = 0
                 while episode < num_episodes:
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_begin'):
+                            callback.on_epoch_begin(i, logs={})
                     if pool_network==True:
                         process_list=[]
                         self.modify_TD()
@@ -1443,6 +1619,11 @@ class RL:
                     episode += 1
                     self.step_in_episode = 0
                     
+                    episode_logs = {'loss': loss}
+                    episode_logs = {'reward': self.reward_list[-1]}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_end'):
+                            callback.on_epoch_end(i, logs=episode_logs)
                     self.loss=loss
                     self.loss_list.append(loss)
                     self.total_episode+=1
@@ -1477,6 +1658,11 @@ class RL:
                 self.step_in_episode = 0
                 while True:
                     t1=time.time()
+                    if self.stop_training==True:
+                        return
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_begin'):
+                            callback.on_epoch_begin(i, logs={})
                     if pool_network==True:
                         process_list=[]
                         self.modify_TD()
@@ -1516,6 +1702,11 @@ class RL:
                     episode += 1
                     self.step_in_episode = 0
                     
+                    episode_logs = {'loss': loss}
+                    episode_logs = {'reward': self.reward_list[-1]}
+                    for callback in self.callbacks:
+                        if hasattr(callback, 'on_episode_end'):
+                            callback.on_epoch_end(i, logs=episode_logs)
                     self.loss=loss
                     self.loss_list.append(loss)
                     self.total_episode+=1
@@ -1551,7 +1742,10 @@ class RL:
         else:
             self.total_time=int(self.time)+1
         self.total_time+=self.time
-        print('time:{0}s'.format(self.time))      
+        print('time:{0}s'.format(self.time))
+        for callback in self.callbacks:
+            if hasattr(callback, 'on_train_end'):
+                callback.on_train_end(logs={})
         return
     
     
