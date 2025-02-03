@@ -163,7 +163,7 @@ from Note.nn.helpers import *
 from Note.nn.initializer import initializer,initializer_
 from Note.nn.interpolate import interpolate
 from Note.nn.lambda_callback import LambdaCallback
-from Note.nn.lr_finder import LRFinder
+from Note.nn.lr_finder import LRFinder,LRFinder_rl
 from Note.nn.Model import Model
 from Note.nn.parallel.optimizer import *
 from Note.nn.pairwise_distance import pairwise_distance
