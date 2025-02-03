@@ -924,7 +924,8 @@ class RL:
         if p==0:
             p=1
         self.train_loss=train_loss
-        self.optimizer=optimizer
+        if self.optimizer==None:
+            self.optimizer=optimizer
         self.episodes=episodes
         self.jit_compile=jit_compile
         self.pool_network=pool_network
@@ -1175,7 +1176,8 @@ class RL:
             p=int(p)
         if p==0:
             p=1
-        self.optimizer=optimizer
+        if self.optimizer==None:
+            self.optimizer=optimizer
         self.strategy=strategy
         self.episodes=episodes
         self.num_episodes=num_episodes
