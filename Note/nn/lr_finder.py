@@ -146,6 +146,7 @@ class LRFinder_rl:
 
     def __init__(self, agent):
         self.agent = agent
+        self.rewards = []
         self.losses = []
         self.lrs = []
         self.best_loss = 1e9
