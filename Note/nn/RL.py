@@ -322,7 +322,7 @@ class RL:
                 gradients = tape.gradient(loss[i], self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
-        return
+        return loss
       
       
     @tf.function
@@ -337,7 +337,7 @@ class RL:
                 gradients = tape.gradient(loss[i], self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
-        return
+        return loss
     
     
     def _train_step(self, train_data, optimizer):
@@ -396,13 +396,11 @@ class RL:
                     if hasattr(callback, 'on_batch_begin'):
                         callback.on_batch_begin(batch, logs={})
                 if self.jit_compile==True:
-                    total_loss += self.distributed_train_step(next(iterator), self.optimizer)
+                    loss = self.distributed_train_step(next(iterator), self.optimizer)
                 else:
-                    total_loss += self.distributed_train_step_(next(iterator), self.optimizer)
-                if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                    batch_logs = {'loss': total_loss.fetch() / num_batches}
-                else:
-                    batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                    loss = self.distributed_train_step_(next(iterator), self.optimizer)
+                total_loss += loss
+                batch_logs = {'loss': loss}
                 for callback in self.callbacks:
                     if hasattr(callback, 'on_batch_end'):
                         callback.on_batch_end(batch, logs=batch_logs)
@@ -467,13 +465,11 @@ class RL:
                     if hasattr(callback, 'on_batch_begin'):
                         callback.on_batch_begin(batch, logs={})
                 if self.jit_compile==True:
-                    total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer))
+                    loss = coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer))
                 else:
-                    total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer))
-                if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                    batch_logs = {'loss': total_loss.fetch() / num_batches}
-                else:
-                    batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                    loss = coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer))
+                total_loss += loss
+                batch_logs = {'loss': loss}
                 for callback in self.callbacks:
                     if hasattr(callback, 'on_batch_end'):
                         callback.on_batch_end(batch, logs=batch_logs)
@@ -532,9 +528,10 @@ class RL:
                         train_ds=self.strategy.experimental_distribute_dataset(train_ds)
                         for state_batch,action_batch,next_state_batch,reward_batch,done_batch in train_ds:
                             if self.jit_compile==True:
-                                total_loss+=self.distributed_train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                                loss=self.distributed_train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
                             else:
-                                total_loss+=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                                loss=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                            total_loss+=loss
                             num_batches += 1
                             self.batch_counter+=1
                             if self.pool_network==True:
@@ -550,17 +547,19 @@ class RL:
                         with self.strategy.scope():
                             multi_worker_dataset = self.strategy.distribute_datasets_from_function(
                                 lambda input_context: self.dataset_fn(train_ds, self.global_batch_size, input_context))  
-                        total_loss+=self.CTL(multi_worker_dataset)
+                        loss=self.CTL(multi_worker_dataset)
+                        total_loss+=loss
                         num_batches += 1
                     elif isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                        total_loss+=self.CTL_param(self.coordinator)
+                        loss=self.CTL_param(self.coordinator)
+                        total_loss+=loss
                         num_batches += 1
                     elif self.distributed_flag!=True:
                         for state_batch,action_batch,next_state_batch,reward_batch,done_batch in train_ds:
                             if self.jit_compile==True:
-                                self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
+                                loss=self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
                             else:
-                                self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
+                                loss=self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
                             self.batch_counter+=1
                             if self.pool_network==True:
                                 if self.batch_counter%self.update_batches==0:
@@ -571,13 +570,7 @@ class RL:
                                         self.next_state_pool=None
                                         self.reward_pool=None
                                         self.done_pool=None
-                    if self.distributed_flag==True:
-                        if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                            batch_logs = {'loss': total_loss.fetch() / num_batches}
-                        else:
-                            batch_logs = {'loss': (total_loss / num_batches).numpy()}
-                    else:
-                        batch_logs = {'loss': train_loss.result().numpy()}
+                    batch_logs = {'loss': loss}
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -599,9 +592,10 @@ class RL:
                         train_ds=self.strategy.experimental_distribute_dataset(train_ds)
                         for state_batch,action_batch,next_state_batch,reward_batch,done_batch in train_ds:
                             if self.jit_compile==True:
-                                total_loss+=self.distributed_train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                                loss=self.distributed_train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
                             else:
-                                total_loss+=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                                loss=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                            total_loss+=loss
                             num_batches += 1
                             self.batch_counter+=1
                             if self.pool_network==True:
@@ -617,16 +611,18 @@ class RL:
                         with self.strategy.scope():
                             multi_worker_dataset = self.strategy.distribute_datasets_from_function(
                                 lambda input_context: self.dataset_fn(train_ds, self.global_batch_size, input_context))  
-                        total_loss+=self.CTL(multi_worker_dataset)
+                        loss=self.CTL(multi_worker_dataset)
+                        total_loss+=loss
                         num_batches += 1
                     elif isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                        total_loss+=self.CTL_param(self.coordinator)
+                        loss=self.CTL_param(self.coordinator)
+                        total_loss+=loss
                         num_batches += 1
                     elif self.distributed_flag!=True:
                         if self.jit_compile==True:
-                            self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
+                            loss=self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
                         else:
-                            self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
+                            loss=self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
                         self.batch_counter+=1
                         if self.pool_network==True:
                             if self.batch_counter%self.update_batches==0:
@@ -637,13 +633,7 @@ class RL:
                                     self.next_state_pool=None
                                     self.reward_pool=None
                                     self.done_pool=None
-                    if self.distributed_flag==True:
-                        if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                            batch_logs = {'loss': total_loss.fetch() / num_batches}
-                        else:
-                            batch_logs = {'loss': (total_loss / num_batches).numpy()}
-                    else:
-                        batch_logs = {'loss': train_loss.result().numpy()}
+                    batch_logs = {'loss': loss}
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -675,13 +665,11 @@ class RL:
                                 if hasattr(callback, 'on_batch_begin'):
                                     callback.on_batch_begin(batch, logs={})
                             if self.jit_compile==True:
-                                total_loss+=self.distributed_train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                                loss=self.distributed_train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
                             else:
-                                total_loss+=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
-                            if isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                                batch_logs = {'loss': total_loss.fetch() / num_batches}
-                            else:
-                                batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                                loss=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
+                            total_loss+=loss
+                            batch_logs = {'loss': loss}
                             for callback in self.callbacks:
                                 if hasattr(callback, 'on_batch_end'):
                                     callback.on_batch_end(batch, logs=batch_logs)
@@ -719,10 +707,10 @@ class RL:
                             if hasattr(callback, 'on_batch_begin'):
                                 callback.on_batch_begin(batch, logs={})
                         if self.jit_compile==True:
-                            self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
+                            loss=self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
                         else:
-                            self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
-                        batch_logs = {'loss': train_loss.result().numpy()}
+                            loss=self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
+                        batch_logs = {'loss': loss}
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_end'):
                                 callback.on_batch_end(batch, logs=batch_logs)
