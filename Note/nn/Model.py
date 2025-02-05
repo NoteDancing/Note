@@ -372,8 +372,9 @@ class Model:
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
         if train_accuracy!=None:
-            train_accuracy(labels, output)
-        return
+            acc=train_accuracy(labels, output)
+            return loss,acc
+        return loss,None
       
       
     @tf.function
@@ -390,8 +391,9 @@ class Model:
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
         if train_accuracy!=None:
-            train_accuracy(labels, output)
-        return
+            acc=train_accuracy(labels, output)
+            return loss,acc
+        return loss,None
         
     
     @tf.function(jit_compile=True)
@@ -430,8 +432,9 @@ class Model:
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         
         if train_accuracy!=None:
-            train_accuracy.update_state(labels, output)
-        return loss 
+            acc=train_accuracy.update_state(labels, output)
+            return loss,acc
+        return loss,None
     
     
     def _test_step(self, inputs, loss_object, test_loss, test_accuracy):
@@ -448,9 +451,9 @@ class Model:
     
     @tf.function(jit_compile=True)
     def distributed_train_step(self, dataset_inputs, optimizer, train_accuracy, strategy):
-        per_replica_losses = strategy.run(self._train_step, args=(dataset_inputs, optimizer, train_accuracy))
+        per_replica_losses,acc = strategy.run(self._train_step, args=(dataset_inputs, optimizer, train_accuracy))
         return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses,
-                             axis=None)
+                             axis=None),acc
     
     
     @tf.function(jit_compile=True)
@@ -460,9 +463,9 @@ class Model:
     
     @tf.function
     def distributed_train_step_(self, dataset_inputs, optimizer, train_accuracy, strategy):
-        per_replica_losses = strategy.run(self._train_step, args=(dataset_inputs, optimizer, train_accuracy))
+        per_replica_losses,acc = strategy.run(self._train_step, args=(dataset_inputs, optimizer, train_accuracy))
         return strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_losses,
-                             axis=None)
+                             axis=None),acc
     
     
     @tf.function
@@ -625,12 +628,12 @@ class Model:
                         if hasattr(callback, 'on_batch_begin'):
                             callback.on_batch_begin(batch, logs={})
                     if jit_compile==True:
-                        self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
+                        loss,acc=self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
-                        self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
-                    batch_logs = {'loss': train_loss.result().numpy()}
+                        loss,acc=self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
+                    batch_logs = {'loss': loss}
                     if train_accuracy != None:
-                        batch_logs['accuracy'] = train_accuracy.result().numpy()
+                        batch_logs['accuracy'] = acc
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -730,12 +733,12 @@ class Model:
                         if hasattr(callback, 'on_batch_begin'):
                             callback.on_batch_begin(batch, logs={})
                     if jit_compile==True:
-                        self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
+                        loss,acc=self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
-                        self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
-                    batch_logs = {'loss': train_loss.result().numpy()}
+                        loss,acc=self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
+                    batch_logs = {'loss': loss}
                     if train_accuracy != None:
-                        batch_logs['accuracy'] = train_accuracy.result().numpy()
+                        batch_logs['accuracy'] = acc
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -897,13 +900,14 @@ class Model:
                             if hasattr(callback, 'on_batch_begin'):
                                 callback.on_batch_begin(batch, logs={})
                         if jit_compile==True:
-                            total_loss += self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
+                            loss,acc = self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
                         else:
-                            total_loss += self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
+                            loss,acc = self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
+                        total_loss += loss
                         
-                        batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                        batch_logs = {'loss': loss}
                         if train_accuracy != None:
-                            batch_logs['accuracy'] = train_accuracy.result().numpy()
+                            batch_logs['accuracy'] = acc
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_end'):
                                 callback.on_batch_end(batch, logs=batch_logs)
@@ -1031,12 +1035,14 @@ class Model:
                             if hasattr(callback, 'on_batch_begin'):
                                 callback.on_batch_begin(batch, logs={})
                         if jit_compile==True:
-                            total_loss += self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
+                            loss,acc = self.distributed_train_step(x, self.optimizer, train_accuracy, strategy)
                         else:
-                            total_loss += self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
-                        batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                            loss,acc = self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
+                        total_loss += loss
+                        
+                        batch_logs = {'loss': loss}
                         if train_accuracy != None:
-                            batch_logs['accuracy'] = train_accuracy.result().numpy()
+                            batch_logs['accuracy'] = acc
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_end'):
                                 callback.on_batch_end(batch, logs=batch_logs)
@@ -1561,12 +1567,13 @@ class Model:
                 if hasattr(callback, 'on_batch_begin'):
                     callback.on_batch_begin(batch, logs={})
             if jit_compile==True:
-                total_loss += self.distributed_train_step(next(iterator), self.optimizer, train_accuracy, strategy)
+                loss,acc = self.distributed_train_step(next(iterator), self.optimizer, train_accuracy, strategy)
             else:
-                total_loss += self.distributed_train_step_(next(iterator), self.optimizer, train_accuracy, strategy)
-            batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                loss,acc = self.distributed_train_step_(next(iterator), self.optimizer, train_accuracy, strategy)
+            total_loss += loss
+            batch_logs = {'loss': loss}
             if train_accuracy != None:
-                batch_logs['accuracy'] = train_accuracy.result().numpy()
+                batch_logs['accuracy'] = acc
             for callback in self.callbacks:
                 if hasattr(callback, 'on_batch_end'):
                     callback.on_batch_end(batch, logs=batch_logs)
@@ -1628,12 +1635,13 @@ class Model:
                 if hasattr(callback, 'on_batch_begin'):
                     callback.on_batch_begin(batch, logs={})
             if jit_compile==True:
-                total_loss += coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
+                loss,acc = coordinator.schedule(self.distributed_train_step, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
             else:
-                total_loss += coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
-            batch_logs = {'loss': (total_loss / num_batches).numpy()}
+                loss,acc = coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
+            total_loss += loss
+            batch_logs = {'loss': loss}
             if train_accuracy != None:
-                batch_logs['accuracy'] = train_accuracy.result().numpy()
+                batch_logs['accuracy'] = acc
             for callback in self.callbacks:
                 if hasattr(callback, 'on_batch_end'):
                     callback.on_batch_end(batch, logs=batch_logs)
