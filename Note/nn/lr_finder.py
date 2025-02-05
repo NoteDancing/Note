@@ -160,21 +160,25 @@ class LRFinder_rl:
         self.lrs.append(lr)
         reward = logs['reward']
         self.rewards.append(reward)
+        
+        mean_reward = np.mean(self.rewards)
+        std_reward = np.std(self.rewards) + 1e-8
+        normalized_reward = (reward - mean_reward) / std_reward
 
-        if episode > 5 and (math.isnan(reward) or reward < self.best_reward * 0.5):
+        if episode > 5 and (math.isnan(normalized_reward) or normalized_reward < self.best_reward * 0.5):
             self.stop_training = True
             return
 
-        if reward > self.best_reward:
-            self.best_reward = reward
+        if normalized_reward > self.best_reward:
+            self.best_reward = normalized_reward
 
-        lr *= self.lr_mult
+        lr += self.delta_lr
         if type(self.agent.optimizer)!=list:
             K.set_value(self.model.optimizer.lr, lr)
         else:
             K.set_value(self.model.optimizer[-1].lr, lr)
     
-    def on_episode_end_loss(self, episode, logs):
+    def on_batch_end(self, batch, logs):
         # Log the learning rate
         if type(self.agent.optimizer)!=list:
             lr = K.get_value(self.agent.optimizer.lr)
@@ -185,25 +189,27 @@ class LRFinder_rl:
         # Log the loss
         loss = logs['loss']
         self.losses.append(loss)
+        
+        mean_loss = np.mean(self.losses)
+        std_loss = np.std(self.losses) + 1e-8
+        normalized_loss = (loss - mean_loss) / std_loss
 
         # Check whether the loss got too large or NaN
-        if episode > 5 and (math.isnan(loss) or loss > self.best_loss * 4):
+        if batch > 5 and (math.isnan(normalized_loss) or normalized_loss > self.best_loss * 4):
             self.agent.stop_training = True
             return
 
-        if loss < self.best_loss:
-            self.best_loss = loss
+        if normalized_loss < self.best_loss:
+            self.best_loss = normalized_loss
 
-        # Increase the learning rate for the next batch
-        lr *= self.lr_mult
+        lr += self.delta_lr
         if type(self.agent.optimizer)!=list:
             K.set_value(self.model.optimizer.lr, lr)
         else:
             K.set_value(self.model.optimizer[-1].lr, lr)
 
-    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, start_lr=None, end_lr=None, episodes=1, metrics='reward', **kw_fit):
-        # Compute number of batches and LR multiplier
-        self.lr_mult = (float(end_lr) / float(start_lr)) ** (float(1) / float(episodes))
+    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, N=None, start_lr=None, end_lr=None, batch_size=64, episodes=1, metrics='reward', **kw_fit):
+        self.delta_lr = (end_lr - start_lr) / N
         # Save weights into a file
         initial_weights = [tf.Variable(param.read_value()) for param in nest.flatten(self.model.param)]
 
@@ -222,7 +228,7 @@ class LRFinder_rl:
         if metrics == 'reward':
             callback = nn.LambdaCallback(on_episode_end=lambda episode, logs: self.on_episode_end(episode, logs))
         elif metrics == 'loss':
-            callback = nn.LambdaCallback(on_episode_end=lambda episode, logs: self.on_episode_end_loss(episode, logs))
+            callback = nn.LambdaCallback(on_batch_end=lambda batch, logs: self.on_batch_end(batch, logs))
 
         if strategy == None:
             self.model.train(train_loss=train_loss, 
