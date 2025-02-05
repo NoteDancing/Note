@@ -189,18 +189,14 @@ class LRFinder_rl:
         # Log the loss
         loss = logs['loss']
         self.losses.append(loss)
-        
-        mean_loss = np.mean(self.losses)
-        std_loss = np.std(self.losses) + 1e-8
-        normalized_loss = (loss - mean_loss) / std_loss
 
         # Check whether the loss got too large or NaN
-        if batch > 5 and (math.isnan(normalized_loss) or normalized_loss > self.best_loss * 4):
+        if batch > 5 and (math.isnan(loss) or loss > self.best_loss * 4):
             self.agent.stop_training = True
             return
 
-        if normalized_loss < self.best_loss:
-            self.best_loss = normalized_loss
+        if loss < self.best_loss:
+            self.best_loss = loss
 
         lr += self.delta_lr
         if type(self.agent.optimizer)!=list:
