@@ -47,7 +47,7 @@ class LRFinder:
         else:
             K.set_value(self.model.optimizer[-1].lr, lr)
 
-    def find(self, N=None, train_ds=None, loss_object=None, train_loss=None, strategy=None, start_lr=None, end_lr=None, batch_size=64, epochs=1, **kw_fit):
+    def find(self, N=None, train_ds=None, loss_object=None, train_loss=None, strategy=None, start_lr=None, end_lr=None, batch_size=64, epochs=1, jit_compile=True):
         # Compute number of batches and LR multiplier
         num_batches = epochs * N / batch_size
         self.lr_mult = (float(end_lr) / float(start_lr)) ** (float(1) / float(num_batches))
@@ -74,7 +74,7 @@ class LRFinder:
                            train_loss=train_loss, 
                            epochs=epochs,
                            callbacks=[callback],
-                           **kw_fit)
+                           jit_compile=jit_compile)
         else:
             self.model.distributed_training(train_dataset=train_ds,
                            loss_object=loss_object, 
@@ -82,7 +82,7 @@ class LRFinder:
                            epochs=epochs,
                            strategy=strategy,
                            callbacks=[callback],
-                           **kw_fit)
+                           jit_compile=jit_compile)
 
         # Restore the weights to the state before model fitting
         nn.assign_param(self.model.param, initial_weights)
@@ -204,7 +204,7 @@ class LRFinder_rl:
         else:
             K.set_value(self.model.optimizer[-1].lr, lr)
 
-    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, N=None, start_lr=None, end_lr=None, batch_size=64, episodes=1, metrics='reward', **kw_fit):
+    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, N=None, start_lr=None, end_lr=None, batch_size=64, episodes=1, metrics='reward', jit_compile=True):
         self.delta_lr = (end_lr - start_lr) / N
         # Save weights into a file
         initial_weights = [tf.Variable(param.read_value()) for param in nest.flatten(self.model.param)]
@@ -234,7 +234,7 @@ class LRFinder_rl:
                            processes_her=processes_her,
                            processes_pr=processes_her,
                            callbacks=[callback],
-                           **kw_fit)
+                           jit_compile=jit_compile)
         else:
             self.model.distributed_training(strategy=strategy,
                            episodes=episodes,
@@ -243,7 +243,7 @@ class LRFinder_rl:
                            processes_her=processes_her,
                            processes_pr=processes_her,
                            callbacks=[callback],
-                           **kw_fit)
+                           jit_compile=jit_compile)
 
         # Restore the weights to the state before model fitting
         nn.assign_param(self.agent.param, initial_weights)
