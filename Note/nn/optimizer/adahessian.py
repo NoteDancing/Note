@@ -34,7 +34,7 @@ class Adahessian(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=None,
+            weight_decay=weight_decay,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -45,7 +45,7 @@ class Adahessian(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay_ = weight_decay
+        self.weight_decay = weight_decay
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -143,7 +143,7 @@ class Adahessian(optimizer.Optimizer):
                 p.hess = tf.broadcast_to(tf.reduce_mean(tf.abs(p.hess), axis=[1, 2], keepdims=True), p.hess.shape)
         
             # Perform correct stepweight decay as in AdamW
-            p.assign(p * (1 - lr * self.weight_decay_))
+            p.assign(p * (1 - lr * self.weight_decay))
             
             exp_avg = self.exp_avg[self._get_variable_index(p)]
             exp_hessian_diag_sq = self.exp_hessian_diag_sq[self._get_variable_index(p)]
@@ -167,7 +167,7 @@ class Adahessian(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay_,
+                "weight_decay": self.weight_decay,
                 "beta1": self.beta1,
                 "beta2": self.beta2,
                 "epsilon": self.epsilon,

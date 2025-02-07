@@ -74,7 +74,7 @@ class Adopt(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=None,
+            weight_decay=weight_decay,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -85,7 +85,7 @@ class Adopt(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay_ = weight_decay
+        self.weight_decay = weight_decay
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -182,7 +182,7 @@ class Adopt(optimizer.Optimizer):
             beta1=self.beta1,
             beta2=self.beta2,
             lr=lr,
-            weight_decay=self.weight_decay_,
+            weight_decay=self.weight_decay,
             clip_exp=self.clip_exp,
             decoupled=self.decoupled,
             eps=self.epsilon,
@@ -199,7 +199,7 @@ class Adopt(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay_,
+                "weight_decay": self.weight_decay,
                 "beta1": self.beta1,
                 "beta2": self.beta2,
                 "epsilon": self.epsilon,
