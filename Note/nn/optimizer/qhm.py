@@ -32,7 +32,7 @@ class QHM(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -43,7 +43,7 @@ class QHM(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay = weight_decay
+        self.weight_decay_ = weight_decay
         self.momentum = momentum
         self.nu = nu
         self.weight_decay_type = weight_decay_type
@@ -68,11 +68,11 @@ class QHM(optimizer.Optimizer):
         
         d_p = gradient
 
-        if self.weight_decay != 0:
+        if self.weight_decay_ != 0:
             if self.weight_decay_type == self.GRAD:
-                d_p.assign_add(variable * self.weight_decay)
+                d_p.assign_add(variable * self.weight_decay_)
             else:
-                variable.assign(variable * (1.0 - lr * self.weight_decay))
+                variable.assign(variable * (1.0 - lr * self.weight_decay_))
 
         momentum_buffer = self.momentum_buffer[self._get_variable_index(variable)]
         momentum_buffer.assign(momentum_buffer * self.momentum + d_p * (1.0 - self.momentum))
@@ -84,7 +84,7 @@ class QHM(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay,
+                "weight_decay": self.weight_decay_,
                 "momentum": self.momentum,
                 "nu": self.nu,
                 "weight_decay_type": self. weight_decay_type,

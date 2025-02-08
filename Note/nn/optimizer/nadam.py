@@ -39,7 +39,7 @@ class NAdam(optimizer.Optimizer):
         super().__init__(
             learning_rate=learning_rate,
             name=name,
-            weight_decay=weight_decay,
+            weight_decay=None,
             clipnorm=clipnorm,
             clipvalue=clipvalue,
             global_clipnorm=global_clipnorm,
@@ -50,7 +50,7 @@ class NAdam(optimizer.Optimizer):
             gradient_accumulation_steps=gradient_accumulation_steps,
             **kwargs,
         )
-        self.weight_decay = weight_decay
+        self.weight_decay_ = weight_decay
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
@@ -91,8 +91,8 @@ class NAdam(optimizer.Optimizer):
         t= self.step[self._get_variable_index(variable)]
         bias_correction2 = 1 - beta2 ** t
         
-        if self.weight_decay != 0:
-            gradient = gradient.assign_add(self.weight_decay * variable)
+        if self.weight_decay_ != 0:
+            gradient = gradient.assign_add(self.weight_decay_ * variable)
 
         momentum_cache_t = beta1 * (1. - 0.5 * (0.96 ** (t * schedule_decay)))
         momentum_cache_t_1 = beta1 * (1. - 0.5 * (0.96 ** ((t + 1) * schedule_decay)))
@@ -112,7 +112,7 @@ class NAdam(optimizer.Optimizer):
         config = super().get_config()
         config.update(
             {
-                "weight_decay": self.weight_decay,
+                "weight_decay": self.weight_decay_,
                 "beta1": self.beta1,
                 "beta2": self.beta2,
                 "epsilon": self.epsilon,
