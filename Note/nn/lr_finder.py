@@ -161,8 +161,12 @@ class LRFinder_rl:
         reward = logs['reward']
         self.rewards.append(reward)
         
-        mean_reward = np.mean(self.rewards)
-        std_reward = np.std(self.rewards) + 1e-8
+        if len(self.rewards) >= self.window_size:
+            recent_rewards = self.rewards[-self.window_size:]
+        else:
+            recent_rewards = self.rewards
+        mean_reward = np.mean(recent_rewards)
+        std_reward = np.std(recent_rewards) + 1e-8
         normalized_reward = (reward - mean_reward) / std_reward
 
         if episode > 5 and (math.isnan(normalized_reward) or normalized_reward < self.best_reward * 0.5):
@@ -172,7 +176,7 @@ class LRFinder_rl:
         if normalized_reward > self.best_reward:
             self.best_reward = normalized_reward
 
-        lr += self.delta_lr
+        lr = lr * self.factor
         if type(self.agent.optimizer)!=list:
             K.set_value(self.model.optimizer.lr, lr)
         else:
@@ -198,14 +202,15 @@ class LRFinder_rl:
         if loss < self.best_loss:
             self.best_loss = loss
 
-        lr += self.delta_lr
+        lr = lr * self.factor
         if type(self.agent.optimizer)!=list:
             K.set_value(self.model.optimizer.lr, lr)
         else:
             K.set_value(self.model.optimizer[-1].lr, lr)
 
-    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, N=None, start_lr=None, end_lr=None, batch_size=64, episodes=1, metrics='reward', jit_compile=True):
-        self.delta_lr = (end_lr - start_lr) / N
+    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, N=None, window_size=None, start_lr=None, end_lr=None, batch_size=64, episodes=1, metrics='reward', jit_compile=True):
+        self.factor = (end_lr / start_lr) ** (1.0 / N)
+        self.window_size = window_size
         # Save weights into a file
         initial_weights = [tf.Variable(param.read_value()) for param in nest.flatten(self.model.param)]
 
