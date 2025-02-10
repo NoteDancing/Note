@@ -129,8 +129,6 @@ class Adahessian(optimizer.Optimizer):
             h_zs = self.tape.gradient(grads, params, output_gradients=zs)
             for h_z, z, p in zip(h_zs, zs, params):
                 p.hess += h_z * z / self.n_samples  # approximate the expected values of z*(H@z)
-        
-        del self.tape
 
     def update_step(self, grads, trainable_variables, learning_rate):
         lr = learning_rate
