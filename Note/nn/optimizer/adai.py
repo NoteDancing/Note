@@ -113,7 +113,7 @@ class Adai(optimizer.Optimizer):
             exp_avg_sq_hat_sum += tf.reduce_sum(exp_avg_sq) / bias_correction2
         
         # Calculate the mean of all elements in exp_avg_sq_hat
-        exp_avg_sq_hat_mean = exp_avg_sq_hat_sum / param_size
+        exp_avg_sq_hat_mean = exp_avg_sq_hat_sum / tf.get_static_value(param_size)
         
         for p, g in zip(trainable_variables, grads):
             exp_avg = self.exp_avg[self._get_variable_index(p)]
