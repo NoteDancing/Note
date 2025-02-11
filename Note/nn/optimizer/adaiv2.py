@@ -2,7 +2,7 @@
 Implements AdaiV2.
 It is a generalized variant of Adai based on
 `Adaptive Inertia: Disentangling the Effects of Adaptive Learning Rate and Momentum`.
-https://proceedings.neurips.cc/paper_files/paper/2018/file/90365351ccc7437a1309dc64e4db32a3-Paper.pdf
+https://arxiv.org/abs/2006.15815
 
 Copyright 2025 NoteDance
 """
