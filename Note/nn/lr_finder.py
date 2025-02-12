@@ -33,10 +33,13 @@ class LRFinder:
         self.losses.append(loss)
 
         # Check whether the loss got too large or NaN
-        if batch > 5 and (math.isnan(loss) or loss > self.best_loss * 4):
+        if batch > 5 and (math.isnan(loss) or loss > self.diverge_th * self.best_loss):
             self.model.stop_training = True
             return
-
+        
+        if batch != 0:
+            if self.smooth_f > 0:
+                loss = self.smooth_f * loss + (1 - self.smooth_f) * self.losses[-1]
         if loss < self.best_loss:
             self.best_loss = loss
 
@@ -47,12 +50,14 @@ class LRFinder:
         else:
             K.set_value(self.model.optimizer[-1].lr, lr)
 
-    def find(self, N=None, train_ds=None, loss_object=None, train_loss=None, strategy=None, start_lr=None, end_lr=None, batch_size=64, epochs=1, jit_compile=True):
+    def find(self, N=None, train_ds=None, loss_object=None, train_loss=None, strategy=None, start_lr=None, end_lr=None, batch_size=64, epochs=1, smooth_f=0.05, diverge_th=5, jit_compile=True):
         # Compute number of batches and LR multiplier
         num_batches = epochs * N / batch_size
         self.lr_mult = (float(end_lr) / float(start_lr)) ** (float(1) / float(num_batches))
         # Save weights into a file
         initial_weights = [tf.Variable(param.read_value()) for param in nest.flatten(self.model.param)]
+        self.smooth_f = smooth_f
+        self.diverge_th = diverge_th
 
         # Remember the original learning rate
         if type(self.model.optimizer)!=list:
@@ -195,10 +200,13 @@ class LRFinder_rl:
         self.losses.append(loss)
 
         # Check whether the loss got too large or NaN
-        if batch > 5 and (math.isnan(loss) or loss > self.best_loss * 4):
+        if batch > 5 and (math.isnan(loss) or loss > self.diverge_th * self.best_loss):
             self.agent.stop_training = True
             return
 
+        if batch != 0:
+            if self.smooth_f > 0:
+                loss = self.smooth_f * loss + (1 - self.smooth_f) * self.losses[-1]
         if loss < self.best_loss:
             self.best_loss = loss
 
@@ -208,11 +216,13 @@ class LRFinder_rl:
         else:
             K.set_value(self.model.optimizer[-1].lr, lr)
 
-    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, N=None, window_size=None, start_lr=None, end_lr=None, episodes=1, metrics='reward', jit_compile=True):
+    def find(self, train_loss=None, pool_network=True, processes=None, processes_her=None, processes_pr=None, strategy=None, N=None, window_size=None, start_lr=None, end_lr=None, episodes=1, metrics='reward', smooth_f=0.05, diverge_th=5, jit_compile=True):
         self.factor = (end_lr / start_lr) ** (1.0 / N)
         self.window_size = window_size
         # Save weights into a file
         initial_weights = [tf.Variable(param.read_value()) for param in nest.flatten(self.model.param)]
+        self.smooth_f = smooth_f
+        self.diverge_th = diverge_th
 
         # Remember the original learning rate
         if type(self.agent.optimizer)!=list:
