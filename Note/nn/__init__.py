@@ -160,6 +160,7 @@ from Note.nn.cosine_similarity import cosine_similarity
 from Note.nn.create_additive_causal_mask import create_additive_causal_mask
 from Note.nn.gather_mm import gather_mm
 from Note.nn.helpers import *
+from Note.nn.init import *
 from Note.nn.initializer import initializer,initializer_
 from Note.nn.interpolate import interpolate
 from Note.nn.lambda_callback import LambdaCallback
@@ -175,4 +176,4 @@ from Note.nn.RL import RL
 from Note.nn.RL_pytorch import RL_pytorch
 from Note.nn.scaled_dot_product_attention import scaled_dot_product_attention
 from Note.nn.Sequential import Sequential
-from Note.nn.init import *
+from Note.nn.solve_triangular import solve_triangular
