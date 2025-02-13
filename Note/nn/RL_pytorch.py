@@ -225,7 +225,7 @@ class RL_pytorch:
         else:
             for i in range(len(optimizer)):
                 optimizer[i].zero_grad()
-                loss[i].backward()
+                loss.backward()
                 optimizer[i].step()
         return loss
     
