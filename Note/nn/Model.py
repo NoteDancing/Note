@@ -368,7 +368,7 @@ class Model:
             optimizer.apply_gradients(zip(gradients, self.param))
         else:
             for i in range(len(optimizer)):
-                gradients = tape.gradient(loss[i], self.param[i])
+                gradients = tape.gradient(loss, self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
         if train_accuracy!=None:
@@ -387,7 +387,7 @@ class Model:
             optimizer.apply_gradients(zip(gradients, self.param))
         else:
             for i in range(len(optimizer)):
-                gradients = tape.gradient(loss[i], self.param[i])
+                gradients = tape.gradient(loss, self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
         if train_accuracy!=None:
@@ -428,7 +428,7 @@ class Model:
             optimizer.apply_gradients(zip(gradients, self.param))
         else:
             for i in range(len(optimizer)):
-                gradients = tape.gradient(loss[i], self.param[i])
+                gradients = tape.gradient(loss, self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         
         if train_accuracy!=None:
@@ -631,10 +631,7 @@ class Model:
                         loss,acc=self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
                         loss,acc=self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
-                    if type(loss) != list:
-                        batch_logs = {'loss': loss.numpy()}
-                    else:
-                        batch_logs = {'loss': loss[-1].numpy()}
+                    batch_logs = {'loss': loss.numpy()}
                     if train_accuracy != None:
                         batch_logs['accuracy'] = acc.numpy()
                     for callback in self.callbacks:
@@ -739,10 +736,7 @@ class Model:
                         loss,acc=self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
                         loss,acc=self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
-                    if type(loss) != list:
-                        batch_logs = {'loss': loss.numpy()}
-                    else:
-                        batch_logs = {'loss': loss[-1].numpy()}
+                    batch_logs = {'loss': loss.numpy()}
                     if train_accuracy != None:
                         batch_logs['accuracy'] = acc.numpy()
                     for callback in self.callbacks:
@@ -911,10 +905,7 @@ class Model:
                             loss,acc = self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
                         total_loss += loss
                         
-                        if type(loss) != list:
-                            batch_logs = {'loss': loss.numpy()}
-                        else:
-                            batch_logs = {'loss': loss[-1].numpy()}
+                        batch_logs = {'loss': loss.numpy()}
                         if train_accuracy != None:
                             batch_logs['accuracy'] = acc.numpy()
                         for callback in self.callbacks:
@@ -1049,10 +1040,7 @@ class Model:
                             loss,acc = self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
                         total_loss += loss
                         
-                        if type(loss) != list:
-                            batch_logs = {'loss': loss.numpy()}
-                        else:
-                            batch_logs = {'loss': loss[-1].numpy()}
+                        batch_logs = {'loss': loss.numpy()}
                         if train_accuracy != None:
                             batch_logs['accuracy'] = acc.numpy()
                         for callback in self.callbacks:
@@ -1583,10 +1571,7 @@ class Model:
             else:
                 loss,acc = self.distributed_train_step_(next(iterator), self.optimizer, train_accuracy, strategy)
             total_loss += loss
-            if type(loss) != list:
-                batch_logs = {'loss': loss.numpy()}
-            else:
-                batch_logs = {'loss': loss[-1].numpy()}
+            batch_logs = {'loss': loss.numpy()}
             if train_accuracy != None:
                 batch_logs['accuracy'] = acc.numpy()
             for callback in self.callbacks:
@@ -1654,10 +1639,7 @@ class Model:
             else:
                 loss,acc = coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
             total_loss += loss
-            if type(loss) != list:
-                batch_logs = {'loss': loss.fetch()}
-            else:
-                batch_logs = {'loss': loss[-1].fetch()}
+            batch_logs = {'loss': loss.fetch()}
             if train_accuracy != None:
                 batch_logs['accuracy'] = acc.numpy()
             for callback in self.callbacks:
