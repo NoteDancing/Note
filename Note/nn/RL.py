@@ -319,7 +319,7 @@ class RL:
             optimizer.apply_gradients(zip(gradients, self.param))
         else:
             for i in range(len(optimizer)):
-                gradients = tape.gradient(loss[i], self.param[i])
+                gradients = tape.gradient(loss, self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
         return loss
@@ -334,7 +334,7 @@ class RL:
             optimizer.apply_gradients(zip(gradients, self.param))
         else:
             for i in range(len(optimizer)):
-                gradients = tape.gradient(loss[i], self.param[i])
+                gradients = tape.gradient(loss, self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         train_loss(loss)
         return loss
@@ -349,7 +349,7 @@ class RL:
             optimizer.apply_gradients(zip(gradients, self.param))
         else:
             for i in range(len(optimizer)):
-                gradients = tape.gradient(loss[i], self.param[i])
+                gradients = tape.gradient(loss, self.param[i])
                 optimizer[i].apply_gradients(zip(gradients, self.param[i]))
         return loss 
     
@@ -400,10 +400,7 @@ class RL:
                 else:
                     loss = self.distributed_train_step_(next(iterator), self.optimizer)
                 total_loss += loss
-                if type(loss) != list:
-                    batch_logs = {'loss': loss.numpy()}
-                else:
-                    batch_logs = {'loss': loss[-1].numpy()}
+                batch_logs = {'loss': loss.numpy()}
                 for callback in self.callbacks:
                     if hasattr(callback, 'on_batch_end'):
                         callback.on_batch_end(batch, logs=batch_logs)
@@ -472,10 +469,7 @@ class RL:
                 else:
                     loss = coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer))
                 total_loss += loss
-                if type(loss) != list:
-                    batch_logs = {'loss': loss.fetch()}
-                else:
-                    batch_logs = {'loss': loss[-1].fetch()}
+                batch_logs = {'loss': loss.fetch()}
                 for callback in self.callbacks:
                     if hasattr(callback, 'on_batch_end'):
                         callback.on_batch_end(batch, logs=batch_logs)
@@ -576,10 +570,7 @@ class RL:
                                         self.next_state_pool=None
                                         self.reward_pool=None
                                         self.done_pool=None
-                    if type(loss) != list:
-                        batch_logs = {'loss': loss.numpy()}
-                    else:
-                        batch_logs = {'loss': loss[-1].numpy()}
+                    batch_logs = {'loss': loss.numpy()}
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -643,15 +634,9 @@ class RL:
                                     self.reward_pool=None
                                     self.done_pool=None
                     if not isinstance(self.strategy,tf.distribute.ParameterServerStrategy):
-                        if type(loss) != list:
-                            batch_logs = {'loss': loss.numpy()}
-                        else:
-                            batch_logs = {'loss': loss[-1].numpy()}
+                        batch_logs = {'loss': loss.numpy()}
                     else:
-                        if type(loss) != list:
-                            batch_logs = {'loss': loss.fetch()}
-                        else:
-                            batch_logs = {'loss': loss[-1].fetch()}
+                        batch_logs = {'loss': loss.fetch()}
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -687,10 +672,7 @@ class RL:
                             else:
                                 loss=self.distributed_train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],optimizer,self.strategy)
                             total_loss+=loss
-                            if type(loss) != list:
-                                batch_logs = {'loss': loss.numpy()}
-                            else:
-                                batch_logs = {'loss': loss[-1].numpy()}
+                            batch_logs = {'loss': loss.numpy()}
                             for callback in self.callbacks:
                                 if hasattr(callback, 'on_batch_end'):
                                     callback.on_batch_end(batch, logs=batch_logs)
@@ -731,10 +713,7 @@ class RL:
                             loss=self.train_step([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
                         else:
                             loss=self.train_step_([state_batch,action_batch,next_state_batch,reward_batch,done_batch],train_loss,optimizer)
-                        if type(loss) != list:
-                            batch_logs = {'loss': loss.numpy()}
-                        else:
-                            batch_logs = {'loss': loss[-1].numpy()}
+                        batch_logs = {'loss': loss.numpy()}
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_end'):
                                 callback.on_batch_end(batch, logs=batch_logs)
