@@ -330,8 +330,8 @@ class kernel:
                 if hasattr(self.nn,'nn'):
                     gradient=tape.gradient(loss,self.nn.param)
                 else:
-                    actor_gradient=tape.gradient(loss[0],self.nn.param[0])
-                    critic_gradient=tape.gradient(loss[1],self.nn.param[1])
+                    actor_gradient=tape.gradient(loss,self.nn.param[0])
+                    critic_gradient=tape.gradient(loss,self.nn.param[1])
             try:
                 if hasattr(self.nn,'attenuate'):
                     try:
@@ -359,8 +359,8 @@ class kernel:
                 if hasattr(self.nn,'nn'):
                     gradient=tape.gradient(loss,self.nn.param)
                 else:
-                    actor_gradient=tape.gradient(loss[0],self.nn.param[0])
-                    critic_gradient=tape.gradient(loss[1],self.nn.param[1])
+                    actor_gradient=tape.gradient(loss,self.nn.param[0])
+                    critic_gradient=tape.gradient(loss,self.nn.param[1])
             g_lock.release()
             if self.priority_flag==True and self.priority_p.value!=-1:
                 while True:
@@ -407,8 +407,8 @@ class kernel:
                 if hasattr(self.nn,'nn'):
                     gradient=tape.gradient(loss,self.nn.param)
                 else:
-                    actor_gradient=tape.gradient(loss[0],self.nn.param[0])
-                    critic_gradient=tape.gradient(loss[1],self.nn.param[1])
+                    actor_gradient=tape.gradient(loss,self.nn.param[0])
+                    critic_gradient=tape.gradient(loss,self.nn.param[1])
             try:
                 if hasattr(self.nn,'attenuate'):
                     try:
