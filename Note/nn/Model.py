@@ -631,9 +631,9 @@ class Model:
                         loss,acc=self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
                         loss,acc=self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
-                    batch_logs = {'loss': loss}
+                    batch_logs = {'loss': loss.numpy()}
                     if train_accuracy != None:
-                        batch_logs['accuracy'] = acc
+                        batch_logs['accuracy'] = acc.numpy()
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -736,9 +736,9 @@ class Model:
                         loss,acc=self.train_step(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
                     else:
                         loss,acc=self.train_step_(train_data, labels, loss_object, train_loss, train_accuracy, self.optimizer)
-                    batch_logs = {'loss': loss}
+                    batch_logs = {'loss': loss.numpy()}
                     if train_accuracy != None:
-                        batch_logs['accuracy'] = acc
+                        batch_logs['accuracy'] = acc.numpy()
                     for callback in self.callbacks:
                         if hasattr(callback, 'on_batch_end'):
                             callback.on_batch_end(batch, logs=batch_logs)
@@ -905,9 +905,9 @@ class Model:
                             loss,acc = self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
                         total_loss += loss
                         
-                        batch_logs = {'loss': loss}
+                        batch_logs = {'loss': loss.numpy()}
                         if train_accuracy != None:
-                            batch_logs['accuracy'] = acc
+                            batch_logs['accuracy'] = acc.numpy()
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_end'):
                                 callback.on_batch_end(batch, logs=batch_logs)
@@ -1040,9 +1040,9 @@ class Model:
                             loss,acc = self.distributed_train_step_(x, self.optimizer, train_accuracy, strategy)
                         total_loss += loss
                         
-                        batch_logs = {'loss': loss}
+                        batch_logs = {'loss': loss.numpy()}
                         if train_accuracy != None:
-                            batch_logs['accuracy'] = acc
+                            batch_logs['accuracy'] = acc.numpy()
                         for callback in self.callbacks:
                             if hasattr(callback, 'on_batch_end'):
                                 callback.on_batch_end(batch, logs=batch_logs)
@@ -1571,9 +1571,9 @@ class Model:
             else:
                 loss,acc = self.distributed_train_step_(next(iterator), self.optimizer, train_accuracy, strategy)
             total_loss += loss
-            batch_logs = {'loss': loss}
+            batch_logs = {'loss': loss.numpy()}
             if train_accuracy != None:
-                batch_logs['accuracy'] = acc
+                batch_logs['accuracy'] = acc.numpy()
             for callback in self.callbacks:
                 if hasattr(callback, 'on_batch_end'):
                     callback.on_batch_end(batch, logs=batch_logs)
@@ -1639,9 +1639,9 @@ class Model:
             else:
                 loss,acc = coordinator.schedule(self.distributed_train_step_, args=(next(per_worker_iterator), self.optimizer, train_accuracy, strategy))
             total_loss += loss
-            batch_logs = {'loss': loss}
+            batch_logs = {'loss': loss.fetch()}
             if train_accuracy != None:
-                batch_logs['accuracy'] = acc
+                batch_logs['accuracy'] = acc.numpy()
             for callback in self.callbacks:
                 if hasattr(callback, 'on_batch_end'):
                     callback.on_batch_end(batch, logs=batch_logs)
