@@ -106,7 +106,7 @@ class DDPG(nn.RL):
             actor_loss,critic_loss=self.loss(s,a,next_s,r,d,i_agent)
             total_actor_loss+=actor_loss
             total_critic_loss+=critic_loss
-        return total_actor_loss,total_critic_loss
+        return total_actor_loss+total_critic_loss
     
     def update_param(self):
         for i in range(self.env.num_agents):
